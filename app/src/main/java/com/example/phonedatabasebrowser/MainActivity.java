@@ -3,6 +3,8 @@ package com.example.phonedatabasebrowser;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
@@ -14,6 +16,11 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.google.mlkit.vision.barcode.common.Barcode;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanner;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions;
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -54,6 +61,7 @@ public class MainActivity extends Activity {
         header.setPadding(dp(20), dp(24), dp(20), dp(8));
         root.addView(header);
         root.addView(text("Browse SQLite database files that you choose on this device.", 14, 0xFF53627A));
+        root.addView(button("📷 Scan barcode", this::scanBarcode));
         root.addView(button("Choose a folder", this::pickFolder));
         root.addView(text("This app can only see files and folders you grant access to. Android blocks ordinary apps from opening other apps’ private databases.", 13, 0xFF7A4B00));
         ScrollView sc = new ScrollView(this);
@@ -62,6 +70,60 @@ public class MainActivity extends Activity {
         root.addView(sc, new LinearLayout.LayoutParams(-1, 0, 1));
         setContentView(root);
         if (folderUri != null) scanFolder(folderUri);
+    }
+
+    private void scanBarcode() {
+        GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
+                .enableAutoZoom()
+                .build();
+        GmsBarcodeScanner scanner = GmsBarcodeScanning.getClient(this, options);
+        scanner.startScan()
+                .addOnSuccessListener(barcode -> {
+                    String value = barcode.getRawValue();
+                    if (value == null || value.trim().isEmpty()) {
+                        Toast.makeText(this, "Barcode detected, but it contains no readable text.", Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    TextView result = text(value, 20, 0xFF14233B);
+                    result.setTextIsSelectable(true);
+                    new AlertDialog.Builder(this)
+                            .setTitle("Decoded barcode")
+                            .setMessage("Format: " + barcodeFormatName(barcode.getFormat()) + "\\n\\nValue:\\n" + value)
+                            .setView(result)
+                            .setPositiveButton("Copy number", (dialog, which) -> {
+                                ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                                if (clipboard != null) {
+                                    clipboard.setPrimaryClip(ClipData.newPlainText("Barcode value", value));
+                                    Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+                                }
+                            })
+                            .setNegativeButton("Close", null)
+                            .show();
+                })
+                .addOnCanceledListener(() ->
+                        Toast.makeText(this, "Barcode scan cancelled.", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Barcode scanner error: " + e.getLocalizedMessage(), Toast.LENGTH_LONG).show());
+    }
+
+    private String barcodeFormatName(int format) {
+        switch (format) {
+            case Barcode.FORMAT_QR_CODE: return "QR Code";
+            case Barcode.FORMAT_CODE_128: return "Code 128";
+            case Barcode.FORMAT_CODE_39: return "Code 39";
+            case Barcode.FORMAT_CODE_93: return "Code 93";
+            case Barcode.FORMAT_CODABAR: return "Codabar";
+            case Barcode.FORMAT_DATA_MATRIX: return "Data Matrix";
+            case Barcode.FORMAT_EAN_13: return "EAN-13";
+            case Barcode.FORMAT_EAN_8: return "EAN-8";
+            case Barcode.FORMAT_ITF: return "ITF";
+            case Barcode.FORMAT_UPC_A: return "UPC-A";
+            case Barcode.FORMAT_UPC_E: return "UPC-E";
+            case Barcode.FORMAT_PDF417: return "PDF417";
+            case Barcode.FORMAT_AZTEC: return "Aztec";
+            default: return "Other";
+        }
     }
 
     private void pickFolder() {
