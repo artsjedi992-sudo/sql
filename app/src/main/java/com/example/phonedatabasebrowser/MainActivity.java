@@ -18,9 +18,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.mlkit.vision.barcode.common.Barcode;
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanner;
-import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions;
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,6 +27,7 @@ import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final int PICK_FOLDER = 101;
+    private static final int SCAN_BARCODE = 102;
     private LinearLayout content;
     private Uri folderUri;
 
@@ -73,37 +71,33 @@ public class MainActivity extends Activity {
     }
 
     private void scanBarcode() {
-        GmsBarcodeScannerOptions options = new GmsBarcodeScannerOptions.Builder()
-                .setBarcodeFormats(Barcode.FORMAT_ALL_FORMATS)
-                .enableAutoZoom()
-                .build();
-        GmsBarcodeScanner scanner = GmsBarcodeScanning.getClient(this, options);
-        scanner.startScan()
-                .addOnSuccessListener(barcode -> {
-                    String value = barcode.getRawValue();
-                    if (value == null || value.trim().isEmpty()) {
-                        Toast.makeText(this, "Barcode detected, but it contains no readable text.", Toast.LENGTH_LONG).show();
-                        return;
-                    }
-                    TextView result = text("Format: " + barcodeFormatName(barcode.getFormat()) + "\\n\\nValue:\\n" + value, 20, 0xFF14233B);
-                    result.setTextIsSelectable(true);
-                    new AlertDialog.Builder(this)
-                            .setTitle("Decoded barcode")
-                            .setView(result)
-                            .setPositiveButton("Copy number", (dialog, which) -> {
-                                ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-                                if (clipboard != null) {
-                                    clipboard.setPrimaryClip(ClipData.newPlainText("Barcode value", value));
-                                    Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
-                                }
-                            })
-                            .setNegativeButton("Close", null)
-                            .show();
-                })
-                .addOnCanceledListener(() ->
-                        Toast.makeText(this, "Barcode scan cancelled.", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e ->
-                        Toast.makeText(this, "Barcode scanner error: " + e.getLocalizedMessage(), Toast.LENGTH_LONG).show());
+        startActivityForResult(new Intent(this, ScannerActivity.class), SCAN_BARCODE);
+    }
+
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SCAN_BARCODE && resultCode == RESULT_OK && data != null) {
+            String value = data.getStringExtra("barcode_value");
+            int format = data.getIntExtra("barcode_format", 0);
+            if (value == null || value.trim().isEmpty()) {
+                Toast.makeText(this, "No readable barcode found.", Toast.LENGTH_LONG).show();
+                return;
+            }
+            TextView result = text("Format: " + barcodeFormatName(format) + "\\n\\nValue:\\n" + value, 20, 0xFF14233B);
+            result.setTextIsSelectable(true);
+            new AlertDialog.Builder(this)
+                    .setTitle("Decoded barcode")
+                    .setView(result)
+                    .setPositiveButton("Copy number", (dialog, which) -> {
+                        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                        if (clipboard != null) {
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Barcode value", value));
+                            Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .setNegativeButton("Close", null)
+                    .show();
+        }
     }
 
     private String barcodeFormatName(int format) {
