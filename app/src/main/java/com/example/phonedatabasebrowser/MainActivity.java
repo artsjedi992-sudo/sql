@@ -85,11 +85,10 @@ public class MainActivity extends Activity {
                         Toast.makeText(this, "Barcode detected, but it contains no readable text.", Toast.LENGTH_LONG).show();
                         return;
                     }
-                    TextView result = text(value, 20, 0xFF14233B);
+                    TextView result = text("Format: " + barcodeFormatName(barcode.getFormat()) + "\\n\\nValue:\\n" + value, 20, 0xFF14233B);
                     result.setTextIsSelectable(true);
                     new AlertDialog.Builder(this)
                             .setTitle("Decoded barcode")
-                            .setMessage("Format: " + barcodeFormatName(barcode.getFormat()) + "\\n\\nValue:\\n" + value)
                             .setView(result)
                             .setPositiveButton("Copy number", (dialog, which) -> {
                                 ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
