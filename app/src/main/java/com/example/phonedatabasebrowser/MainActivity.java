@@ -83,7 +83,7 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, "No readable barcode found.", Toast.LENGTH_LONG).show();
                 return;
             }
-            TextView result = text("Format: " + barcodeFormatName(format) + "\\n\\nValue:\\n" + value, 20, 0xFF14233B);
+            TextView result = text("Format: " + barcodeFormatName(format) + "\n\nValue:\n" + value, 20, 0xFF14233B);
             result.setTextIsSelectable(true);
             new AlertDialog.Builder(this)
                     .setTitle("Decoded barcode")
@@ -97,6 +97,12 @@ public class MainActivity extends Activity {
                     })
                     .setNegativeButton("Close", null)
                     .show();
+        }
+        if (requestCode == PICK_FOLDER && resultCode == RESULT_OK && data != null) {
+            folderUri = data.getData();
+            try { getContentResolver().takePersistableUriPermission(folderUri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }
+            catch (Exception ignored) {}
+            showHome();
         }
     }
 
@@ -125,15 +131,6 @@ public class MainActivity extends Activity {
         startActivityForResult(i, PICK_FOLDER);
     }
 
-    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_FOLDER && resultCode == RESULT_OK && data != null) {
-            folderUri = data.getData();
-            try { getContentResolver().takePersistableUriPermission(folderUri, Intent.FLAG_GRANT_READ_URI_PERMISSION); }
-            catch (Exception ignored) {}
-            showHome();
-        }
-    }
 
     private void scanFolder(Uri tree) {
         content.removeAllViews();
