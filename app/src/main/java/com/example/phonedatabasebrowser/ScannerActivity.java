@@ -1,7 +1,7 @@
 package com.example.phonedatabasebrowser;
 
 import android.Manifest;
-import android.app.Activity;
+import androidx.activity.ComponentActivity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -30,7 +30,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class ScannerActivity extends Activity {
+public class ScannerActivity extends ComponentActivity {
     private static final int CAMERA_PERMISSION_REQUEST = 300;
     private PreviewView previewView;
     private ExecutorService cameraExecutor;
