@@ -177,8 +177,34 @@ public class MainActivity extends Activity {
             while (c.moveToNext()) {
                 rows++;
                 for (int i = 0; i < c.getColumnCount(); i++) {
-                    String value = c.isNull(i) ? "NULL" : c.getString(i);
-                    if (value != null && value.length() > 180) value = value.substring(0, 180) + "…";
+                    String value;
+                    switch (c.getType(i)) {
+                        case Cursor.FIELD_TYPE_NULL:
+                            value = "NULL";
+                            break;
+                        case Cursor.FIELD_TYPE_INTEGER:
+                            value = Long.toString(c.getLong(i));
+                            break;
+                        case Cursor.FIELD_TYPE_FLOAT:
+                            value = Double.toString(c.getDouble(i));
+                            break;
+                        case Cursor.FIELD_TYPE_BLOB:
+                            byte[] blob = c.getBlob(i);
+                            StringBuilder hex = new StringBuilder();
+                            int preview = Math.min(blob.length, 16);
+                            for (int j = 0; j < preview; j++) {
+                                if (j > 0) hex.append(' ');
+                                hex.append(String.format(Locale.ROOT, "%02X", blob[j] & 0xFF));
+                            }
+                            value = "[BLOB: " + blob.length + " bytes" +
+                                    (preview > 0 ? "; hex: " + hex + (blob.length > preview ? " …" : "") : "") + "]";
+                            break;
+                        case Cursor.FIELD_TYPE_STRING:
+                        default:
+                            value = c.getString(i);
+                            if (value != null && value.length() > 180) value = value.substring(0, 180) + "…";
+                            break;
+                    }
                     out.append(value == null ? "" : value).append(i == c.getColumnCount()-1 ? "\n" : "  |  ");
                 }
                 out.append("\n");
