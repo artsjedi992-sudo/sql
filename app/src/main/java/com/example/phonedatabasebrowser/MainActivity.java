@@ -10,6 +10,10 @@ import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -28,11 +32,15 @@ import java.util.Locale;
 public class MainActivity extends Activity {
     private static final int PICK_FOLDER = 101;
     private static final int SCAN_BARCODE = 102;
+    private static final int PICK_LOG_FOLDER = 103;
     private LinearLayout content;
     private Uri folderUri;
+    private Uri logFolderUri;
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        String savedLogFolder = getPreferences(MODE_PRIVATE).getString("log_folder_uri", null);
+        if (savedLogFolder != null) logFolderUri = Uri.parse(savedLogFolder);
         showHome();
     }
 
@@ -60,6 +68,8 @@ public class MainActivity extends Activity {
         root.addView(header);
         root.addView(text("Browse SQLite database files that you choose on this device.", 14, 0xFF53627A));
         root.addView(button("📷 Scan barcode", this::scanBarcode));
+        root.addView(button("Choose folder for scan logs (TXT + Excel CSV)", this::pickLogFolder));
+        root.addView(text(logFolderUri == null ? "Scan log folder: not selected" : "Logs: scanned_codes.txt and scanned_codes.csv", 13, 0xFF53627A));
         root.addView(button("Choose a folder", this::pickFolder));
         root.addView(text("This app can only see files and folders you grant access to. Android blocks ordinary apps from opening other apps’ private databases.", 13, 0xFF7A4B00));
         ScrollView sc = new ScrollView(this);
@@ -83,6 +93,7 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, "No readable barcode found.", Toast.LENGTH_LONG).show();
                 return;
             }
+            saveScannedCode(value, format);
             TextView result = text("Format: " + barcodeFormatName(format) + "\n\nValue:\n" + value, 20, 0xFF14233B);
             result.setTextIsSelectable(true);
             new AlertDialog.Builder(this)
@@ -97,6 +108,15 @@ public class MainActivity extends Activity {
                     })
                     .setNegativeButton("Close", null)
                     .show();
+        }
+        if (requestCode == PICK_LOG_FOLDER && resultCode == RESULT_OK && data != null) {
+            logFolderUri = data.getData();
+            try { getContentResolver().takePersistableUriPermission(logFolderUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION); }
+            catch (Exception ignored) {}
+            getPreferences(MODE_PRIVATE).edit().putString("log_folder_uri", logFolderUri.toString()).apply();
+            Toast.makeText(this, "Папката за логове е запазена.", Toast.LENGTH_LONG).show();
+            showHome();
+            return;
         }
         if (requestCode == PICK_FOLDER && resultCode == RESULT_OK && data != null) {
             folderUri = data.getData();
@@ -122,6 +142,71 @@ public class MainActivity extends Activity {
             case Barcode.FORMAT_PDF417: return "PDF417";
             case Barcode.FORMAT_AZTEC: return "Aztec";
             default: return "Other";
+        }
+    }
+
+
+    private void pickLogFolder() {
+        Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        startActivityForResult(i, PICK_LOG_FOLDER);
+    }
+
+    private void saveScannedCode(String value, int format) {
+        if (logFolderUri == null) {
+            Toast.makeText(this, "Първо избери папка за логовете.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        Date now = new Date();
+        String date = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(now);
+        String time = new SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(now);
+        String formatName = barcodeFormatName(format);
+        try {
+            appendToLogFile("scanned_codes.txt",
+                    date + " " + time + " | " + formatName + " | " + value + System.lineSeparator(), false);
+            appendToLogFile("scanned_codes.csv",
+                    csv(date) + "," + csv(time) + "," + csv(value) + "," + csv(formatName) + "\r\n", true);
+            Toast.makeText(this, "Записано в TXT и Excel CSV.", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Грешка при запис: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private String csv(String value) {
+        if (value == null) value = "";
+        return "\"" + value.replace("\"", "\"\"") + "\"";
+    }
+
+    private void appendToLogFile(String fileName, String line, boolean excelCsv) throws Exception {
+        Uri fileUri = null;
+        String treeId = DocumentsContract.getTreeDocumentId(logFolderUri);
+        Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(logFolderUri, treeId);
+        try (Cursor cursor = getContentResolver().query(childrenUri,
+                new String[]{DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                        DocumentsContract.Document.COLUMN_DISPLAY_NAME},
+                null, null, null)) {
+            if (cursor != null) {
+                while (cursor.moveToNext()) {
+                    if (fileName.equals(cursor.getString(1))) {
+                        fileUri = DocumentsContract.buildDocumentUriUsingTree(logFolderUri, cursor.getString(0));
+                        break;
+                    }
+                }
+            }
+        }
+        boolean newFile = fileUri == null;
+        if (newFile) fileUri = DocumentsContract.createDocument(
+                getContentResolver(), logFolderUri, "text/plain", fileName);
+        if (fileUri == null) throw new Exception("Не може да се създаде " + fileName);
+        try (OutputStream out = getContentResolver().openOutputStream(fileUri, "wa")) {
+            if (out == null) throw new Exception("Не може да се отвори " + fileName);
+            if (newFile && excelCsv) {
+                out.write(new byte[]{(byte)0xEF, (byte)0xBB, (byte)0xBF});
+                out.write("Дата,Час,Баркод,Формат\r\n".getBytes(StandardCharsets.UTF_8));
+            }
+            out.write(line.getBytes(StandardCharsets.UTF_8));
+            out.flush();
         }
     }
 
