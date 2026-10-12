@@ -110,9 +110,27 @@ public class MainActivity extends Activity {
                     .show();
         }
         if (requestCode == PICK_LOG_FOLDER && resultCode == RESULT_OK && data != null) {
-            logFolderUri = data.getData();
-            try { getContentResolver().takePersistableUriPermission(logFolderUri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION); }
-            catch (Exception ignored) {}
+            Uri selectedUri = data.getData();
+            logFolderUri = selectedUri;
+            try {
+                // Some document providers return a document URI rather than a tree URI.
+                // Convert it to a tree URI before using DocumentsContract tree operations.
+                if (selectedUri != null && !DocumentsContract.isTreeUri(selectedUri)) {
+                    String documentId;
+                    try {
+                        documentId = DocumentsContract.getDocumentId(selectedUri);
+                    } catch (Exception ignored) {
+                        documentId = Uri.decode(selectedUri.getLastPathSegment());
+                    }
+                    logFolderUri = DocumentsContract.buildTreeDocumentUri(
+                            selectedUri.getAuthority(), documentId);
+                }
+                getContentResolver().takePersistableUriPermission(logFolderUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            } catch (Exception e) {
+                Toast.makeText(this, "Не успях да запазя достъпа до папката: " + e.getMessage(),
+                        Toast.LENGTH_LONG).show();
+            }
             getPreferences(MODE_PRIVATE).edit().putString("log_folder_uri", logFolderUri.toString()).apply();
             Toast.makeText(this, "Папката за логове е запазена.", Toast.LENGTH_LONG).show();
             showHome();
