@@ -68,8 +68,7 @@ public class MainActivity extends Activity {
         root.addView(header);
         root.addView(text("Browse SQLite database files that you choose on this device.", 14, 0xFF53627A));
         root.addView(button("📷 Scan barcode", this::scanBarcode));
-        root.addView(button("Choose folder for scan logs (TXT + Excel CSV)", this::pickLogFolder));
-        root.addView(text(logFolderUri == null ? "Scan log folder: not selected" : "Logs: scanned_codes.txt and scanned_codes.csv", 13, 0xFF53627A));
+        root.addView(text("Scan logs are saved automatically as scanned_codes.txt and scanned_codes.csv in the app Documents folder.", 13, 0xFF53627A));
         root.addView(button("Choose a folder", this::pickFolder));
         root.addView(text("This app can only see files and folders you grant access to. Android blocks ordinary apps from opening other apps’ private databases.", 13, 0xFF7A4B00));
         ScrollView sc = new ScrollView(this);
@@ -172,20 +171,31 @@ public class MainActivity extends Activity {
     }
 
     private void saveScannedCode(String value, int format) {
-        if (logFolderUri == null) {
-            Toast.makeText(this, "Първо избери папка за логовете.", Toast.LENGTH_LONG).show();
-            return;
-        }
         Date now = new Date();
         String date = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(now);
         String time = new SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(now);
         String formatName = barcodeFormatName(format);
         try {
-            appendToLogFile("scanned_codes.txt",
-                    date + " " + time + " | " + formatName + " | " + value + System.lineSeparator(), false);
-            appendToLogFile("scanned_codes.csv",
-                    csv(date) + "," + csv(time) + "," + csv(value) + "," + csv(formatName) + "\r\n", true);
-            Toast.makeText(this, "Записано в TXT и Excel CSV.", Toast.LENGTH_SHORT).show();
+            File dir = getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS);
+            if (dir == null) dir = getFilesDir();
+            if (!dir.exists() && !dir.mkdirs()) throw new Exception("Не може да се създаде папка за логовете");
+            File txt = new File(dir, "scanned_codes.txt");
+            File csvFile = new File(dir, "scanned_codes.csv");
+            try (FileOutputStream out = new FileOutputStream(txt, true)) {
+                out.write((date + " " + time + " | " + formatName + " | " + value + System.lineSeparator())
+                        .getBytes(StandardCharsets.UTF_8));
+            }
+            boolean newCsv = !csvFile.exists() || csvFile.length() == 0;
+            try (FileOutputStream out = new FileOutputStream(csvFile, true)) {
+                if (newCsv) {
+                    out.write(new byte[]{(byte)0xEF, (byte)0xBB, (byte)0xBF});
+                    out.write("Дата,Час,Баркод,Формат\\r\\n".getBytes(StandardCharsets.UTF_8));
+                }
+                out.write((csv(date) + "," + csv(time) + "," + csv(value) + "," + csv(formatName) + "\\r\\n")
+                        .getBytes(StandardCharsets.UTF_8));
+            }
+            Toast.makeText(this, "Записано в TXT и Excel CSV. Папка: " + dir.getAbsolutePath(),
+                    Toast.LENGTH_LONG).show();
         } catch (Exception e) {
             Toast.makeText(this, "Грешка при запис: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
