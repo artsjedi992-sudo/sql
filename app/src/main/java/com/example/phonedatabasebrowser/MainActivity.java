@@ -16,6 +16,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -36,6 +37,24 @@ public class MainActivity extends Activity {
     private LinearLayout content;
     private Uri folderUri;
     private Uri logFolderUri;
+    private LinearLayout queueContainer;
+    private TextView queueCount;
+    private final ArrayList<ScanEntry> scanQueue = new ArrayList<>();
+
+    private static class ScanEntry {
+        String value;
+        final String date;
+        final String time;
+        final String format;
+        EditText editor;
+
+        ScanEntry(String value, String date, String time, String format) {
+            this.value = value;
+            this.date = date;
+            this.time = time;
+            this.format = format;
+        }
+    }
 
     @Override public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,17 +83,24 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(0xFFF3F6FB);
         TextView header = text("Database Browser", 25, 0xFF14233B);
-        header.setPadding(dp(20), dp(24), dp(20), dp(8));
+        header.setPadding(dp(20), dp(12), dp(20), dp(4));
         root.addView(header);
-        root.addView(text("Browse SQLite database files that you choose on this device.", 14, 0xFF53627A));
-        root.addView(button("📷 Scan barcode", this::scanBarcode));
-        root.addView(text("Scan logs are saved automatically as scanned_codes.txt and scanned_codes.csv in the app Documents folder.", 13, 0xFF53627A));
-        root.addView(button("Choose a folder", this::pickFolder));
-        root.addView(text("This app can only see files and folders you grant access to. Android blocks ordinary apps from opening other apps’ private databases.", 13, 0xFF7A4B00));
-        ScrollView sc = new ScrollView(this);
+        root.addView(button("📷 Сканирай баркод", this::scanBarcode));
+        queueCount = text("Сканирани баркодове (0)", 17, 0xFF14233B);
+        root.addView(queueCount);
+        ScrollView queueScroll = new ScrollView(this);
+        queueContainer = new LinearLayout(this);
+        queueContainer.setOrientation(LinearLayout.VERTICAL);
+        queueScroll.addView(queueContainer);
+        root.addView(queueScroll, new LinearLayout.LayoutParams(-1, dp(230)));
+        renderQueue();
+        root.addView(button("Избери папка с бази данни", this::pickFolder));
+        root.addView(text("Избраните бази данни се показват по-долу. Логовете се записват във файловете scanned_codes.txt и scanned_codes.csv.", 12, 0xFF53627A));
+        ScrollView dbScroll = new ScrollView(this);
         content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL);
-        sc.addView(content);
-        root.addView(sc, new LinearLayout.LayoutParams(-1, 0, 1));
+        dbScroll.addView(content);
+        root.addView(dbScroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        root.addView(button("Запиши всички във файловете и изчисти таблицата", this::saveQueuedCodes));
         setContentView(root);
         if (folderUri != null) scanFolder(folderUri);
     }
@@ -92,21 +118,13 @@ public class MainActivity extends Activity {
                 Toast.makeText(this, "No readable barcode found.", Toast.LENGTH_LONG).show();
                 return;
             }
-            saveScannedCode(value, format);
-            TextView result = text("Format: " + barcodeFormatName(format) + "\n\nValue:\n" + value, 20, 0xFF14233B);
-            result.setTextIsSelectable(true);
-            new AlertDialog.Builder(this)
-                    .setTitle("Decoded barcode")
-                    .setView(result)
-                    .setPositiveButton("Copy number", (dialog, which) -> {
-                        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-                        if (clipboard != null) {
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Barcode value", value));
-                            Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
-                        }
-                    })
-                    .setNegativeButton("Close", null)
-                    .show();
+            Date now = new Date();
+            scanQueue.add(new ScanEntry(value,
+                    new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(now),
+                    new SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(now),
+                    barcodeFormatName(format)));
+            renderQueue();
+            Toast.makeText(this, "Добавен в таблицата. Общо: " + scanQueue.size(), Toast.LENGTH_SHORT).show();
         }
         if (requestCode == PICK_LOG_FOLDER && resultCode == RESULT_OK && data != null) {
             Uri selectedUri = data.getData();
@@ -170,32 +188,86 @@ public class MainActivity extends Activity {
         startActivityForResult(i, PICK_LOG_FOLDER);
     }
 
-    private void saveScannedCode(String value, int format) {
-        Date now = new Date();
-        String date = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(now);
-        String time = new SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(now);
-        String formatName = barcodeFormatName(format);
+    private void renderQueue() {
+        if (queueContainer == null || queueCount == null) return;
+        for (ScanEntry entry : scanQueue) {
+            if (entry.editor != null) entry.value = entry.editor.getText().toString();
+        }
+        queueContainer.removeAllViews();
+        queueCount.setText("Сканирани баркодове (" + scanQueue.size() + ")");
+        if (scanQueue.isEmpty()) {
+            queueContainer.addView(text("Тук ще се появява всеки сканиран номер. Можете да го редактирате или изтриете преди запис.", 14, 0xFF53627A));
+            return;
+        }
+        for (int i = 0; i < scanQueue.size(); i++) {
+            final ScanEntry entry = scanQueue.get(i);
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.VERTICAL);
+            row.setPadding(dp(8), dp(4), dp(8), dp(6));
+            row.setBackgroundColor(i % 2 == 0 ? 0xFFFFFFFF : 0xFFE8EEF6);
+            row.addView(text((i + 1) + ".  " + entry.date + " " + entry.time + "  |  " + entry.format, 12, 0xFF53627A));
+            LinearLayout editRow = new LinearLayout(this);
+            editRow.setOrientation(LinearLayout.HORIZONTAL);
+            entry.editor = new EditText(this);
+            entry.editor.setSingleLine(true);
+            entry.editor.setTextSize(16);
+            entry.editor.setHint("Номер на баркода");
+            entry.editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT
+                    | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+            entry.editor.setText(entry.value);
+            editRow.addView(entry.editor, new LinearLayout.LayoutParams(0, dp(52), 1));
+            Button delete = button("Изтрий", () -> {
+                entry.value = entry.editor.getText().toString();
+                scanQueue.remove(entry);
+                renderQueue();
+            });
+            editRow.addView(delete, new LinearLayout.LayoutParams(dp(90), dp(52)));
+            row.addView(editRow);
+            queueContainer.addView(row);
+        }
+    }
+
+    private void saveQueuedCodes() {
+        if (scanQueue.isEmpty()) {
+            Toast.makeText(this, "Таблицата е празна.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        for (ScanEntry entry : scanQueue) {
+            if (entry.editor != null) entry.value = entry.editor.getText().toString().trim();
+            if (entry.value.isEmpty()) {
+                Toast.makeText(this, "Има празен номер. Попълни го или изтрий реда.", Toast.LENGTH_LONG).show();
+                return;
+            }
+        }
         try {
             File dir = getExternalFilesDir(android.os.Environment.DIRECTORY_DOCUMENTS);
             if (dir == null) dir = getFilesDir();
             if (!dir.exists() && !dir.mkdirs()) throw new Exception("Не може да се създаде папка за логовете");
             File txt = new File(dir, "scanned_codes.txt");
             File csvFile = new File(dir, "scanned_codes.csv");
+            StringBuilder txtRows = new StringBuilder();
+            StringBuilder csvRows = new StringBuilder();
+            for (ScanEntry entry : scanQueue) {
+                txtRows.append(entry.date).append(" ").append(entry.time).append(" | ")
+                        .append(entry.format).append(" | ").append(entry.value).append(System.lineSeparator());
+                csvRows.append(csv(entry.date)).append(",").append(csv(entry.time)).append(",")
+                        .append(csv(entry.value)).append(",").append(csv(entry.format)).append("\r\n");
+            }
             try (FileOutputStream out = new FileOutputStream(txt, true)) {
-                out.write((date + " " + time + " | " + formatName + " | " + value + System.lineSeparator())
-                        .getBytes(StandardCharsets.UTF_8));
+                out.write(txtRows.toString().getBytes(StandardCharsets.UTF_8));
             }
             boolean newCsv = !csvFile.exists() || csvFile.length() == 0;
             try (FileOutputStream out = new FileOutputStream(csvFile, true)) {
                 if (newCsv) {
                     out.write(new byte[]{(byte)0xEF, (byte)0xBB, (byte)0xBF});
-                    out.write("Дата,Час,Баркод,Формат\\r\\n".getBytes(StandardCharsets.UTF_8));
+                    out.write("Дата,Час,Баркод,Формат\r\n".getBytes(StandardCharsets.UTF_8));
                 }
-                out.write((csv(date) + "," + csv(time) + "," + csv(value) + "," + csv(formatName) + "\\r\\n")
-                        .getBytes(StandardCharsets.UTF_8));
+                out.write(csvRows.toString().getBytes(StandardCharsets.UTF_8));
             }
-            Toast.makeText(this, "Записано в TXT и Excel CSV. Папка: " + dir.getAbsolutePath(),
-                    Toast.LENGTH_LONG).show();
+            int saved = scanQueue.size();
+            scanQueue.clear();
+            renderQueue();
+            Toast.makeText(this, "Записани са " + saved + " реда. Таблицата е изчистена.", Toast.LENGTH_LONG).show();
         } catch (Exception e) {
             Toast.makeText(this, "Грешка при запис: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
