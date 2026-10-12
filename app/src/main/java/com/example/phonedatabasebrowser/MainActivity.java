@@ -72,35 +72,87 @@ public class MainActivity extends Activity {
         return t;
     }
 
+    private GradientDrawable shape(int color, int stroke, int radiusDp) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color);
+        d.setCornerRadius(dp(radiusDp));
+        if (stroke != 0) d.setStroke(dp(1), stroke);
+        return d;
+    }
+
     private Button button(String label, Runnable action) {
-        Button b = new Button(this); b.setText(label);
-        b.setAllCaps(false); b.setOnClickListener(v -> action.run());
+        Button b = new Button(this);
+        b.setText(label);
+        b.setAllCaps(false);
+        b.setTextSize(14);
+        b.setTextColor(Color.WHITE);
+        b.setTypeface(null, android.graphics.Typeface.BOLD);
+        b.setPadding(dp(10), dp(8), dp(10), dp(8));
+        b.setBackground(shape(0xFF0878D1, 0, 12));
+        b.setElevation(dp(2));
+        b.setOnClickListener(v -> action.run());
+        return b;
+    }
+
+    private Button coloredButton(String label, int color, Runnable action) {
+        Button b = button(label, action);
+        b.setBackground(shape(color, 0, 12));
         return b;
     }
 
     private void showHome() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(0xFFF3F6FB);
-        TextView header = text("Database Browser", 25, 0xFF14233B);
-        header.setPadding(dp(20), dp(12), dp(20), dp(4));
+        root.setBackgroundColor(0xFFF1F6FC);
+
+        LinearLayout header = new LinearLayout(this);
+        header.setOrientation(LinearLayout.VERTICAL);
+        header.setPadding(dp(12), dp(10), dp(12), dp(12));
+        header.setBackground(shape(0xFF0878D1, 0, 0));
+        TextView title = text("▤  Phone Database Browser", 22, Color.WHITE);
+        title.setTypeface(null, android.graphics.Typeface.BOLD);
+        header.addView(title);
+        header.addView(text("Сканиране  •  Таблица  •  Запис във файлове", 13, 0xFFE1F1FF));
         root.addView(header);
-        root.addView(button("📷 Сканирай баркод", this::scanBarcode));
-        queueCount = text("Сканирани баркодове (0)", 17, 0xFF14233B);
-        root.addView(queueCount);
+
+        LinearLayout actions = new LinearLayout(this);
+        actions.setPadding(dp(8), dp(8), dp(8), dp(4));
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        Button scan = coloredButton("📷 Сканирай баркод", 0xFF079455, this::scanBarcode);
+        actions.addView(scan, new LinearLayout.LayoutParams(0, dp(54), 1));
+        root.addView(actions);
+
+        LinearLayout summary = new LinearLayout(this);
+        summary.setPadding(dp(12), dp(4), dp(12), dp(4));
+        summary.setBackground(shape(0xFFE3F1FF, 0xFFB9D9F7, 12));
+        queueCount = text("В ТАБЛИЦАТА: 0", 16, 0xFF103D73);
+        queueCount.setTypeface(null, android.graphics.Typeface.BOLD);
+        summary.addView(queueCount);
+        root.addView(summary, new LinearLayout.LayoutParams(-1, -2));
+
         ScrollView queueScroll = new ScrollView(this);
         queueContainer = new LinearLayout(this);
         queueContainer.setOrientation(LinearLayout.VERTICAL);
+        queueContainer.setPadding(dp(8), dp(4), dp(8), dp(4));
         queueScroll.addView(queueContainer);
-        root.addView(queueScroll, new LinearLayout.LayoutParams(-1, dp(230)));
+        root.addView(queueScroll, new LinearLayout.LayoutParams(-1, 0, 6));
         renderQueue();
-        root.addView(button("Избери папка с бази данни", this::pickFolder));
-        root.addView(text("Избраните бази данни се показват по-долу. Логовете се записват във файловете scanned_codes.txt и scanned_codes.csv.", 12, 0xFF53627A));
+
+        root.addView(coloredButton("💾  ЗАПИШИ ВСИЧКИ И ИЗЧИСТИ ТАБЛИЦАТА", 0xFF079455, this::saveQueuedCodes),
+                new LinearLayout.LayoutParams(-1, dp(58)));
+
+        LinearLayout dbActions = new LinearLayout(this);
+        dbActions.setPadding(dp(8), dp(3), dp(8), dp(3));
+        dbActions.addView(coloredButton("Избери папка с бази данни", 0xFF6236C9, this::pickFolder),
+                new LinearLayout.LayoutParams(-1, dp(48)));
+        root.addView(dbActions);
+
+        root.addView(text("Файлове: scanned_codes.txt  |  scanned_codes.csv", 11, 0xFF506780));
         ScrollView dbScroll = new ScrollView(this);
-        content = new LinearLayout(this); content.setOrientation(LinearLayout.VERTICAL);
+        content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
         dbScroll.addView(content);
-        root.addView(dbScroll, new LinearLayout.LayoutParams(-1, 0, 1));
-        root.addView(button("Запиши всички във файловете и изчисти таблицата", this::saveQueuedCodes));
+        root.addView(dbScroll, new LinearLayout.LayoutParams(-1, 0, 2));
         setContentView(root);
         if (folderUri != null) scanFolder(folderUri);
     }
@@ -194,37 +246,74 @@ public class MainActivity extends Activity {
             if (entry.editor != null) entry.value = entry.editor.getText().toString();
         }
         queueContainer.removeAllViews();
-        queueCount.setText("Сканирани баркодове (" + scanQueue.size() + ")");
+        queueCount.setText("▦  В ТАБЛИЦАТА: " + scanQueue.size());
+        LinearLayout table = new LinearLayout(this);
+        table.setOrientation(LinearLayout.VERTICAL);
+        table.setBackground(shape(Color.WHITE, 0xFFBDD4EC, 8));
+        table.setClipToOutline(true);
+
+        LinearLayout headings = new LinearLayout(this);
+        headings.setOrientation(LinearLayout.HORIZONTAL);
+        headings.setBackgroundColor(0xFF086EC4);
+        headings.addView(tableCell("№", 0.45f, true, true));
+        headings.addView(tableCell("Дата / час", 1.15f, true, true));
+        headings.addView(tableCell("Баркод / номер (редактируем)", 2.0f, true, true));
+        headings.addView(tableCell("Изтрий", 0.7f, true, true));
+        table.addView(headings);
+
         if (scanQueue.isEmpty()) {
-            queueContainer.addView(text("Тук ще се появява всеки сканиран номер. Можете да го редактирате или изтриете преди запис.", 14, 0xFF53627A));
-            return;
+            TextView empty = text("Тук ще се появява всеки сканиран номер.\nМожеш да редактираш номерата или да изтриеш ненужните редове преди запис.", 14, 0xFF52677E);
+            empty.setGravity(android.view.Gravity.CENTER);
+            empty.setPadding(dp(12), dp(24), dp(12), dp(24));
+            table.addView(empty);
+        } else {
+            for (int i = 0; i < scanQueue.size(); i++) {
+                final ScanEntry entry = scanQueue.get(i);
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                row.setBackgroundColor(i % 2 == 0 ? 0xFFFFFFFF : 0xFFEAF4FF);
+                row.addView(tableCell(String.valueOf(i + 1), 0.45f, false, false));
+                row.addView(tableCell(entry.date + "\n" + entry.time, 1.15f, false, false));
+                LinearLayout editCell = new LinearLayout(this);
+                editCell.setPadding(dp(3), dp(4), dp(3), dp(4));
+                entry.editor = new EditText(this);
+                entry.editor.setSingleLine(true);
+                entry.editor.setTextSize(14);
+                entry.editor.setTextColor(0xFF102D50);
+                entry.editor.setHint("Номер");
+                entry.editor.setPadding(dp(8), dp(4), dp(8), dp(4));
+                entry.editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+                entry.editor.setBackground(shape(0xFFF8FBFF, 0xFFB7D4F3, 6));
+                entry.editor.setText(entry.value);
+                editCell.addView(entry.editor, new LinearLayout.LayoutParams(-1, dp(46)));
+                row.addView(editCell, new LinearLayout.LayoutParams(0, -2, 2.0f));
+                LinearLayout delCell = new LinearLayout(this);
+                delCell.setGravity(android.view.Gravity.CENTER);
+                Button delete = coloredButton("✕", 0xFFE83F55, () -> {
+                    entry.value = entry.editor.getText().toString();
+                    scanQueue.remove(entry);
+                    renderQueue();
+                });
+                delete.setTextSize(14);
+                delCell.addView(delete, new LinearLayout.LayoutParams(dp(42), dp(42)));
+                row.addView(delCell, new LinearLayout.LayoutParams(0, dp(58), 0.7f));
+                table.addView(row);
+                View line = new View(this);
+                line.setBackgroundColor(0xFFD7E5F3);
+                table.addView(line, new LinearLayout.LayoutParams(-1, dp(1)));
+            }
         }
-        for (int i = 0; i < scanQueue.size(); i++) {
-            final ScanEntry entry = scanQueue.get(i);
-            LinearLayout row = new LinearLayout(this);
-            row.setOrientation(LinearLayout.VERTICAL);
-            row.setPadding(dp(8), dp(4), dp(8), dp(6));
-            row.setBackgroundColor(i % 2 == 0 ? 0xFFFFFFFF : 0xFFE8EEF6);
-            row.addView(text((i + 1) + ".  " + entry.date + " " + entry.time + "  |  " + entry.format, 12, 0xFF53627A));
-            LinearLayout editRow = new LinearLayout(this);
-            editRow.setOrientation(LinearLayout.HORIZONTAL);
-            entry.editor = new EditText(this);
-            entry.editor.setSingleLine(true);
-            entry.editor.setTextSize(16);
-            entry.editor.setHint("Номер на баркода");
-            entry.editor.setInputType(android.text.InputType.TYPE_CLASS_TEXT
-                    | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-            entry.editor.setText(entry.value);
-            editRow.addView(entry.editor, new LinearLayout.LayoutParams(0, dp(52), 1));
-            Button delete = button("Изтрий", () -> {
-                entry.value = entry.editor.getText().toString();
-                scanQueue.remove(entry);
-                renderQueue();
-            });
-            editRow.addView(delete, new LinearLayout.LayoutParams(dp(90), dp(52)));
-            row.addView(editRow);
-            queueContainer.addView(row);
-        }
+        queueContainer.addView(table);
+        queueContainer.addView(text("Форматът се запазва автоматично от скенера. Дата и час са от момента на сканиране.", 11, 0xFF5D7188));
+    }
+
+    private TextView tableCell(String value, float weight, boolean header, boolean centered) {
+        TextView t = text(value, header ? 12 : 12, header ? Color.WHITE : 0xFF163A60);
+        t.setGravity(centered ? android.view.Gravity.CENTER : android.view.Gravity.CENTER_VERTICAL);
+        if (header) t.setTypeface(null, android.graphics.Typeface.BOLD);
+        t.setPadding(dp(4), dp(10), dp(4), dp(10));
+        return t;
     }
 
     private void saveQueuedCodes() {
