@@ -33,7 +33,6 @@ import androidx.camera.view.PreviewView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.google.common.util.concurrent.ListenableFuture;
-import android.util.Range;
 
 public class TachometerActivity extends ComponentActivity {
     private static final int CAMERA_PERMISSION_REQUEST = 301;
@@ -141,7 +140,6 @@ public class TachometerActivity extends ComponentActivity {
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .setTargetResolution(new android.util.Size(640, 480));
                 // Request a high analysis rate where the device/camera supports it.
-                try { builder.setTargetFrameRate(new Range<>(60, 60)); } catch (Exception ignored) {}
                 ImageAnalysis analysis = builder.build();
                 analysis.setAnalyzer(cameraExecutor, this::analyze);
                 provider.unbindAll();
