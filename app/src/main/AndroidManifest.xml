@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
         android:allowBackup="false"
         android:label="Database Browser"
@@ -7,6 +9,7 @@
         android:usesCleartextTraffic="false">
         <activity android:name=".ScannerActivity" android:exported="false" />
         <activity android:name=".TachometerActivity" android:exported="false" />
+        <activity android:name=".CarDynoActivity" android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
