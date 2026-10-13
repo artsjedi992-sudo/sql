@@ -123,6 +123,10 @@ public class MainActivity extends Activity {
         Button scan = coloredButton("📷 Сканирай баркод", 0xFF079455, this::scanBarcode);
         actions.addView(scan, new LinearLayout.LayoutParams(0, dp(54), 1));
         root.addView(actions);
+        LinearLayout tachAction = new LinearLayout(this);
+        tachAction.setPadding(dp(8), dp(0), dp(8), dp(4));
+        tachAction.addView(coloredButton("⟳  Оптичен тахометър (500–3000 RPM)", 0xFF6236C9, () -> startActivity(new Intent(this, TachometerActivity.class))), new LinearLayout.LayoutParams(-1, dp(52)));
+        root.addView(tachAction);
 
         LinearLayout summary = new LinearLayout(this);
         summary.setPadding(dp(12), dp(4), dp(12), dp(4));
