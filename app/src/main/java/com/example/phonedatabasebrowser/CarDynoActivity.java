@@ -93,18 +93,18 @@ public class CarDynoActivity extends Activity implements LocationListener {
     }
 
     private EditText field(String label, String value) {
-        LinearLayout wrap = new LinearLayout(this);
-        wrap.setOrientation(LinearLayout.VERTICAL);
-        TextView l = text(label, 12, 0xFF526780); wrap.addView(l);
-        EditText e = new EditText(this); e.setSingleLine(true); e.setText(value); e.setTextSize(16);
-        e.setPadding(dp(8), 0, dp(8), 0); e.setBackground(bg(0xFFFFFFFF, 0xFFBDCADB)); wrap.addView(e);
+        EditText e = new EditText(this);
+        e.setSingleLine(true);
+        e.setText(value);
+        e.setHint(label);
+        e.setTextSize(16);
+        e.setPadding(dp(8), 0, dp(8), 0);
+        e.setBackground(bg(0xFFFFFFFF, 0xFFBDCADB));
         if (label.startsWith("Маса")) massInput=e;
         else if (label.equals("Cd")) cdInput=e;
         else if (label.startsWith("Челна")) areaInput=e;
         else if (label.startsWith("Търкаляне")) crrInput=e;
         else efficiencyInput=e;
-        wrap.setPadding(dp(3), dp(3), dp(3), dp(3));
-        wrap.setTag(e);
         return e;
     }
 
