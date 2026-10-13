@@ -127,6 +127,10 @@ public class MainActivity extends Activity {
         tachAction.setPadding(dp(8), dp(0), dp(8), dp(4));
         tachAction.addView(coloredButton("⟳  Оптичен тахометър (500–3000 RPM)", 0xFF6236C9, () -> startActivity(new Intent(this, TachometerActivity.class))), new LinearLayout.LayoutParams(-1, dp(52)));
         root.addView(tachAction);
+        LinearLayout dynoAction = new LinearLayout(this);
+        dynoAction.setPadding(dp(8), dp(0), dp(8), dp(4));
+        dynoAction.addView(coloredButton("🚗  Автомобилен динамометър", 0xFFB45309, () -> startActivity(new Intent(this, CarDynoActivity.class))), new LinearLayout.LayoutParams(-1, dp(52)));
+        root.addView(dynoAction);
 
         LinearLayout summary = new LinearLayout(this);
         summary.setPadding(dp(12), dp(4), dp(12), dp(4));
