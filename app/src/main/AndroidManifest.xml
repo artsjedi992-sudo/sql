@@ -6,6 +6,7 @@
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
         <activity android:name=".ScannerActivity" android:exported="false" />
+        <activity android:name=".TachometerActivity" android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true">
