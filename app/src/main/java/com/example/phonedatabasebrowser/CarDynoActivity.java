@@ -62,6 +62,7 @@ import java.util.Date;
 // Езикови настройки за форматиране.
 import java.util.Locale;
 
+// Декларация на метод или конструктор за тази част от функционалността.
 public class CarDynoActivity extends Activity implements LocationListener {
     // Полета за маса, аеродинамика, търкаляне и ефективност на трансмисията.
     private static final int REQUEST_LOCATION = 712;
@@ -81,6 +82,7 @@ public class CarDynoActivity extends Activity implements LocationListener {
     private boolean running = false;
     // CSV започва със заглавията на колоните; всяка GPS точка добавя нов ред.
     private Location previous = null;
+    // Декларация на метод или конструктор за тази част от функционалността.
     private double smoothAccel = 0, peakWheelW = 0, peakEngineW = 0, currentWheelW = 0, currentEngineW = 0;
     // Android извиква този метод при създаване на екрана.
     private final StringBuilder csv = new StringBuilder("Date,Time,Speed_kmh,Acceleration_m_s2,WheelPower_kW,EstimatedEnginePower_kW\r\n");
@@ -93,7 +95,9 @@ public class CarDynoActivity extends Activity implements LocationListener {
         lm = (LocationManager) getSystemService(LOCATION_SERVICE);
         // Създаваме и подреждаме всички елементи на екрана.
         android.content.SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        // Изпълняваме следващата стъпка от обработката.
         tireWidth=prefs.getString("tire_width","195"); tireAspect=prefs.getString("tire_aspect","50"); rimInches=prefs.getString("rim_inches","15");
+        // Изпълняваме следващата стъпка от обработката.
         buildUi();
     // Създава интерфейса за параметри, резултати и управление на теста.
     }
@@ -213,131 +217,207 @@ public class CarDynoActivity extends Activity implements LocationListener {
 
     // Създава етикет и поле за въвеждане на един технически параметър.
     private LinearLayout field(String label, String value) {
+        // Декларираме променлива или обект, нужен за следващата операция.
         LinearLayout wrap = new LinearLayout(this);
+        // Настройваме интерфейса или добавяме данни към резултатите.
         wrap.setOrientation(LinearLayout.VERTICAL);
+        // Декларираме променлива или обект, нужен за следващата операция.
         TextView l = text(label, 12, 0xFF526780);
+        // Настройваме интерфейса или добавяме данни към резултатите.
         wrap.addView(l);
+        // Декларираме променлива или обект, нужен за следващата операция.
         EditText e = new EditText(this);
+        // Настройваме интерфейса или добавяме данни към резултатите.
         e.setSingleLine(true);
+        // Настройваме интерфейса или добавяме данни към резултатите.
         e.setText(value);
+        // Настройваме интерфейса или добавяме данни към резултатите.
         e.setTextSize(16);
+        // Настройваме интерфейса или добавяме данни към резултатите.
         e.setPadding(dp(8), 0, dp(8), 0);
+        // Настройваме интерфейса или добавяме данни към резултатите.
         e.setBackground(bg(0xFFFFFFFF, 0xFFBDCADB));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         wrap.addView(e, new LinearLayout.LayoutParams(-1, dp(46)));
+        // Проверяваме условие, преди да продължим.
         if (label.startsWith("Маса")) massInput=e;
+        // Изпълняваме алтернативния клон, когато условието не е изпълнено.
         else if (label.equals("Cd")) cdInput=e;
+        // Изпълняваме алтернативния клон, когато условието не е изпълнено.
         else if (label.startsWith("Челна")) areaInput=e;
+        // Изпълняваме алтернативния клон, когато условието не е изпълнено.
         else if (label.startsWith("Търкаляне")) crrInput=e;
+        // Изпълняваме алтернативния клон, когато условието не е изпълнено.
         else efficiencyInput=e;
+        // Настройваме интерфейса или добавяме данни към резултатите.
         wrap.setPadding(dp(3), dp(3), dp(3), dp(3));
+        // Връщаме резултата или прекратяваме метода на това място.
         return wrap;
     }
 
     // Създава заглавие на секция с подходящи отстояния.
     private TextView panelLabel(String s) {
+        // Настройваме интерфейса или добавяме данни към резултатите.
         TextView t=text(s,17,0xFF15345B); t.setPadding(0,dp(15),0,dp(6)); return t;
     }
     // Създава визуално отделено поле за текущ резултат.
     private TextView metric(String s) {
+        // Настройваме интерфейса или добавяме данни към резултатите.
         TextView t=text(s,18,0xFF15345B); t.setPadding(dp(12),dp(10),dp(12),dp(10));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         t.setBackground(bg(0xFFFFFFFF,0xFFD5E0EE)); LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1, -2); p.bottomMargin=dp(6); t.setLayoutParams(p); return t;
     }
     // Създава текстов изглед със зададени текст, размер и цвят.
     private TextView text(String s,int size,int color) {
+        // Настройваме интерфейса или добавяме данни към резултатите.
         TextView t=new TextView(this); t.setText(s); t.setTextSize(size); t.setTextColor(color); return t;
     }
     // Създава бутон с общо оформление за този екран.
     private Button button(String s,int color) {
+        // Настройваме интерфейса или добавяме данни към резултатите.
         Button b=new Button(this); b.setText(s); b.setTextColor(Color.WHITE); b.setBackground(bg(color,color));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(52)); p.topMargin=dp(7); b.setLayoutParams(p); return b;
     }
     // Изработва фон с рамка и заоблени ъгли.
     private GradientDrawable bg(int color,int stroke) {
+        // Настройваме интерфейса или добавяме данни към резултатите.
         GradientDrawable d=new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(10)); d.setStroke(dp(1),stroke); return d;
     }
+    // Декларация на метод или конструктор за тази част от функционалността.
     private int dp(float v) { return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
     // Прочита число от поле; при невалиден текст връща резервна стойност.
     private double val(EditText e,double fallback) {
+        // Изолираме операцията, която може да върне грешка.
         try { return Double.parseDouble(e.getText().toString().trim().replace(',','.')); } catch(Exception ex) { return fallback; }
     }
 
 
     // Изчислява външния диаметър на гумата в милиметри от нейния размер.
     private double tireDiameterMm() {
+        // Изолираме операцията, която може да върне грешка.
         try { return Double.parseDouble(rimInches)*25.4+2*Double.parseDouble(tireWidth)*Double.parseDouble(tireAspect)/100.0; }
+        // Обработваме грешка, за да не прекъсне приложението неочаквано.
         catch(Exception e) { return 576.0; }
     }
 
     // Отваря диалог за редактиране на техническите данни на автомобила.
     private void showVehicleSettings() {
+        // Настройваме интерфейса или добавяме данни към резултатите.
         LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); form.setPadding(dp(18),dp(8),dp(18),dp(4));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         ScrollView sc=new ScrollView(this); sc.addView(form);
+        // Декларираме променлива или обект, нужен за следващата операция.
         EditText mass=settingField(form,"Маса с водача (kg)",massInput.getText().toString());
+        // Декларираме променлива или обект, нужен за следващата операция.
         EditText cd=settingField(form,"Коефициент въздушно съпротивление Cd",cdInput.getText().toString());
+        // Декларираме променлива или обект, нужен за следващата операция.
         EditText area=settingField(form,"Челна площ (m²)",areaInput.getText().toString());
+        // Декларираме променлива или обект, нужен за следващата операция.
         EditText crr=settingField(form,"Коефициент търкаляне Crr",crrInput.getText().toString());
+        // Декларираме променлива или обект, нужен за следващата операция.
         EditText eff=settingField(form,"Ефективност на трансмисията (0–1)",efficiencyInput.getText().toString());
+        // Декларираме променлива или обект, нужен за следващата операция.
         EditText tw=settingField(form,"Ширина на гумата (mm)",tireWidth);
+        // Декларираме променлива или обект, нужен за следващата операция.
         EditText ta=settingField(form,"Профил на гумата (%)",tireAspect);
+        // Декларираме променлива или обект, нужен за следващата операция.
         EditText rim=settingField(form,"Диаметър на джантата (цола)",rimInches);
+        // Настройваме интерфейса или добавяме данни към резултатите.
         new AlertDialog.Builder(this).setTitle("Технически данни на автомобила").setView(sc)
+          // Настройваме интерфейса или добавяме данни към резултатите.
           .setNegativeButton("Отказ",null).setPositiveButton("ЗАПАЗИ",(d,w)->{
+            // Настройваме интерфейса или добавяме данни към резултатите.
             massInput.setText(mass.getText()); cdInput.setText(cd.getText()); areaInput.setText(area.getText());
+            // Настройваме интерфейса или добавяме данни към резултатите.
             crrInput.setText(crr.getText()); efficiencyInput.setText(eff.getText());
+            // Изпълняваме следващата стъпка от обработката.
             tireWidth=tw.getText().toString().trim(); tireAspect=ta.getText().toString().trim(); rimInches=rim.getText().toString().trim();
+            // Изпълняваме следващата стъпка от обработката.
             saveVehicleSettings(); Toast.makeText(this,"Данните са запазени за следващите стартирания.",Toast.LENGTH_LONG).show(); buildUi();
+          // Изпълняваме следващата стъпка от обработката.
           }).show();
     }
 
     // Добавя поле към диалога за настройки и връща създадения EditText.
     private EditText settingField(LinearLayout parent,String label,String value) {
+        // Настройваме интерфейса или добавяме данни към резултатите.
         parent.addView(text(label,13,0xFF526780));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         EditText e=new EditText(this); e.setSingleLine(true); e.setText(value);
+        // Настройваме интерфейса или добавяме данни към резултатите.
         e.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL|android.text.InputType.TYPE_NUMBER_FLAG_SIGNED);
+        // Настройваме интерфейса или добавяме данни към резултатите.
         parent.addView(e,new LinearLayout.LayoutParams(-1,dp(48))); return e;
     }
 
     // Записва параметрите локално, така че да се запазят след рестарт.
     private void saveVehicleSettings() {
+        // Настройка или изчисление, използвано в тази функционалност.
         getPreferences(MODE_PRIVATE).edit().putString("mass",massInput.getText().toString())
+          // Настройка или изчисление, използвано в тази функционалност.
           .putString("cd",cdInput.getText().toString()).putString("area",areaInput.getText().toString())
+          // Настройка или изчисление, използвано в тази функционалност.
           .putString("crr",crrInput.getText().toString()).putString("efficiency",efficiencyInput.getText().toString())
+          // Изпълняваме следващата стъпка от обработката.
           .putString("tire_width",tireWidth).putString("tire_aspect",tireAspect).putString("rim_inches",rimInches).apply();
     }
 
     // Показва графиката на мощността от последния измерен тест.
     private void showPowerGraph() {
+        // Проверяваме условие, преди да продължим.
         if(graphPower.size()<2) {
+          // Настройваме интерфейса или добавяме данни към резултатите.
           new AlertDialog.Builder(this).setTitle("Графика на мощността").setMessage("Първо направи измерване. Графиката се чертае от данните на последния тест.").setPositiveButton("Добре",null).show(); return;
         }
+        // Настройваме интерфейса или добавяме данни към резултатите.
         LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(8),dp(8),dp(8),dp(8));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         box.addView(text(String.format(Locale.getDefault(),"Пик в теста: %.1f kW (≈ %.1f к.с.). X: скорост (km/h), Y: оценена мощност на двигателя (kW).",peakEngineW/1000,peakEngineW/735.5),13,0xFF15345B));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         box.addView(new PowerGraphView(),new LinearLayout.LayoutParams(-1,dp(330)));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         new AlertDialog.Builder(this).setTitle("Графика на мощността").setView(box).setPositiveButton("Затвори",null).show();
     }
 
     // Персонализиран изглед, който чертае кривата на мощността.
     private class PowerGraphView extends View {
+        // Декларация на метод или конструктор за тази част от функционалността.
         private final Paint p=new Paint(3);
+        // Декларация на метод или конструктор за тази част от функционалността.
         PowerGraphView(){super(CarDynoActivity.this);setBackgroundColor(Color.WHITE);}
+        // Реализация на callback, който Android извиква автоматично.
         @Override protected void onDraw(Canvas c) {
+          // Извикваме стандартното поведение на родителския Android клас.
           super.onDraw(c); float left=dp(48),top=dp(18),right=getWidth()-dp(16),bottom=getHeight()-dp(42);
+          // Декларираме променлива или обект, нужен за следващата операция.
           float maxX=1,maxY=1; for(float x:graphSpeed)maxX=Math.max(maxX,x); for(float y:graphPower)maxY=Math.max(maxY,y); maxY=(float)Math.ceil(maxY*1.15);
+          // Настройваме интерфейса или добавяме данни към резултатите.
           p.setColor(0xFFDCE4EF);p.setStrokeWidth(dp(1));
+          // Обхождаме стойностите, за да обработим всяка точка.
           for(int i=0;i<=5;i++){float y=bottom-(bottom-top)*i/5f;c.drawLine(left,y,right,y,p);p.setColor(0xFF526780);p.setTextSize(dp(10));c.drawText(String.format(Locale.US,"%.0f",maxY*i/5),dp(5),y+dp(4),p);p.setColor(0xFFDCE4EF);}
+          // Изпълняваме следващата стъпка от обработката.
           c.drawLine(left,top,left,bottom,p);c.drawLine(left,bottom,right,bottom,p);
+          // Настройваме интерфейса или добавяме данни към резултатите.
           p.setColor(0xFFB45309);p.setStrokeWidth(dp(2.5f));p.setStyle(Paint.Style.STROKE);p.setStrokeJoin(Paint.Join.ROUND);
+          // Декларираме променлива или обект, нужен за следващата операция.
           android.graphics.Path path=new android.graphics.Path();
+          // Обхождаме стойностите, за да обработим всяка точка.
           for(int i=0;i<graphPower.size();i++){float x=left+(right-left)*graphSpeed.get(i)/maxX;float y=bottom-(bottom-top)*graphPower.get(i)/maxY;if(i==0)path.moveTo(x,y);else path.lineTo(x,y);}
+          // Настройваме интерфейса или добавяме данни към резултатите.
           c.drawPath(path,p);p.setStyle(Paint.Style.FILL);p.setColor(0xFF15345B);p.setTextSize(dp(11));
+          // Изпълняваме следващата стъпка от обработката.
           c.drawText("Скорост (km/h)",(left+right)/2-dp(35),getHeight()-dp(8),p);
+          // Изпълняваме следващата стъпка от обработката.
           c.save();c.rotate(-90,dp(12),(top+bottom)/2);c.drawText("Мощност (kW)",dp(12),(top+bottom)/2,p);c.restore();
         }
     }
 
+    // Декларация на метод или конструктор за тази част от функционалността.
     private void startTest() {
         // Показваме веднага обратна връзка, за да е ясно, че бутонът е натиснат.
         statusText.setText("Подготовка на GPS измерването...");
+        // Изпълняваме следващата стъпка от обработката.
         Toast.makeText(this, "Подготовка на нов тест...", Toast.LENGTH_SHORT).show();
 
         // Проверяваме дали приложението има точно разрешение за местоположение.
@@ -350,10 +430,13 @@ public class CarDynoActivity extends Activity implements LocationListener {
 
         // Проверяваме дали GPS е включен, преди да подготвим измерването.
         try {
+            // Проверяваме условие, преди да продължим.
             if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 // Обясняваме какво липсва, вместо бутонът да изглежда неработещ.
                 statusText.setText("GPS е изключен. Включи Местоположение/GPS от настройките и натисни Старт отново.");
+                // Изпълняваме следващата стъпка от обработката.
                 Toast.makeText(this, "Включи GPS от настройките на телефона.", Toast.LENGTH_LONG).show();
+                // Връщаме резултата или прекратяваме метода на това място.
                 return;
             }
 
@@ -362,15 +445,19 @@ public class CarDynoActivity extends Activity implements LocationListener {
 
             // Нулираме предишната GPS точка и филтрираното ускорение за нов тест.
             previous = null;
+            // Изпълняваме следващата стъпка от обработката.
             smoothAccel = 0;
 
             // Нулираме максималните измерени стойности за мощността.
             peakWheelW = 0;
+            // Изпълняваме следващата стъпка от обработката.
             peakEngineW = 0;
 
             // Изчистваме резултатите от предишния тест.
             csv.setLength(0);
+            // Изпълняваме следващата стъпка от обработката.
             graphSpeed.clear();
+            // Изпълняваме следващата стъпка от обработката.
             graphPower.clear();
 
             // Пишем заглавния ред на CSV файла за новото измерване.
@@ -384,93 +471,153 @@ public class CarDynoActivity extends Activity implements LocationListener {
 
             // Показваме, че измерването е започнало и че се чака GPS точка.
             statusText.setText("Тестът е стартиран. Чакам GPS данни... Използвай само на затворен, безопасен участък.");
+            // Изпълняваме следващата стъпка от обработката.
             Toast.makeText(this, "Тестът е стартиран. Изчаква се GPS сигнал.", Toast.LENGTH_LONG).show();
 
+        // Начало на блок с действия за тази част от програмата.
         } catch (SecurityException e) {
             // Спираме теста, ако Android откаже достъп до GPS.
             running = false;
 
             // Показваме конкретна инструкция при липсващо разрешение.
             statusText.setText("Няма точно разрешение за местоположение. Разреши Location/GPS за приложението.");
+            // Изпълняваме следващата стъпка от обработката.
             Toast.makeText(this, "Разреши точно местоположение за приложението.", Toast.LENGTH_LONG).show();
 
+        // Начало на блок с действия за тази част от програмата.
         } catch (Exception e) {
             // Спираме теста при друга грешка при стартиране на GPS.
             running = false;
 
             // Показваме причината, ако Android върне грешка при заявката за GPS.
             statusText.setText("Грешка при стартиране: " + e.getMessage());
+            // Изпълняваме следващата стъпка от обработката.
             Toast.makeText(this, "Грешка при GPS: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
     // Обработва нова GPS точка и преизчислява скорост, ускорение и мощност.
     @Override public void onLocationChanged(Location loc) {
+        // Проверяваме условие, преди да продължим.
         if (!running) return;
+        // Декларираме променлива или обект, нужен за следващата операция.
         double speed = loc.hasSpeed() ? loc.getSpeed() : 0;
+        // Декларираме променлива или обект, нужен за следващата операция.
         double accel=0;
+        // Проверяваме условие, преди да продължим.
         if (previous != null) {
+            // Декларираме променлива или обект, нужен за следващата операция.
             double dt=(loc.getTime()-previous.getTime())/1000.0;
+            // Проверяваме условие, преди да продължим.
             if (dt>0.15 && dt<3.0 && previous.hasSpeed() && loc.hasSpeed()) {
+                // Изпълняваме следващата стъпка от обработката.
                 accel=(speed-previous.getSpeed())/dt;
+                // Изпълняваме следващата стъпка от обработката.
                 accel=Math.max(-8,Math.min(8,accel));
+                // Изпълняваме следващата стъпка от обработката.
                 smoothAccel=0.65*smoothAccel+0.35*accel;
             }
         }
+        // Изпълняваме следващата стъпка от обработката.
         previous=loc;
+        // Декларираме променлива или обект, нужен за следващата операция.
         double mass=Math.max(500,val(massInput,1250));
+        // Декларираме променлива или обект, нужен за следващата операция.
         double cd=Math.max(0,val(cdInput,0.29));
+        // Декларираме променлива или обект, нужен за следващата операция.
         double area=Math.max(0.5,val(areaInput,2.02));
+        // Декларираме променлива или обект, нужен за следващата операция.
         double crr=Math.max(0,val(crrInput,0.012));
+        // Декларираме променлива или обект, нужен за следващата операция.
         double efficiency=Math.max(0.5,Math.min(1.0,val(efficiencyInput,0.85)));
+        // Декларираме променлива или обект, нужен за следващата операция.
         double rho=1.225, g=9.80665;
+        // Декларираме променлива или обект, нужен за следващата операция.
         double rolling=crr*mass*g;
+        // Декларираме променлива или обект, нужен за следващата операция.
         double aero=0.5*rho*cd*area*speed*speed;
+        // Декларираме променлива или обект, нужен за следващата операция.
         double wheelW=(mass*smoothAccel+rolling+aero)*speed;
+        // Изпълняваме следващата стъпка от обработката.
         wheelW=Math.max(0,wheelW);
+        // Декларираме променлива или обект, нужен за следващата операция.
         double engineW=wheelW/efficiency;
+        // Изпълняваме следващата стъпка от обработката.
         currentWheelW=wheelW; currentEngineW=engineW;
+        // Изпълняваме следващата стъпка от обработката.
         graphSpeed.add((float)(speed*3.6)); graphPower.add((float)(engineW/1000));
+        // Изпълняваме следващата стъпка от обработката.
         peakWheelW=Math.max(peakWheelW,wheelW); peakEngineW=Math.max(peakEngineW,engineW);
+        // Настройваме интерфейса или добавяме данни към резултатите.
         speedText.setText(String.format(Locale.getDefault(),"Скорост: %.1f km/h",speed*3.6));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         accelText.setText(String.format(Locale.getDefault(),"Ускорение: %.2f m/s²",smoothAccel));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         powerText.setText(String.format(Locale.getDefault(),"Мощност на колелата: %.1f kW",wheelW/1000));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         engineText.setText(String.format(Locale.getDefault(),"Оценка на двигателя: %.1f kW / %.1f к.с.",engineW/1000,engineW/735.5));
+        // Настройваме интерфейса или добавяме данни към резултатите.
         detailsText.setText(String.format(Locale.getDefault(),"Пик колела: %.1f kW • пик двигател: %.1f к.с.\nGPS точност: ±%.1f m",peakWheelW/1000,peakEngineW/735.5,loc.hasAccuracy()?loc.getAccuracy():-1));
+        // Декларираме променлива или обект, нужен за следващата операция.
         String stamp=new SimpleDateFormat("yyyy-MM-dd,HH:mm:ss",Locale.US).format(new Date());
+        // Настройваме интерфейса или добавяме данни към резултатите.
         csv.append(String.format(Locale.US,"%s,%.2f,%.3f,%.3f,%.3f\r\n",stamp,speed*3.6,smoothAccel,wheelW/1000,engineW/1000));
     }
 
     // Спира GPS слушането и записва събраните данни като CSV файл.
     private void stopAndSave() {
+        // Изпълняваме следващата стъпка от обработката.
         running=false;
+        // Изолираме операцията, която може да върне грешка.
         try { lm.removeUpdates(this); } catch(Exception ignored) {}
+        // Проверяваме условие, преди да продължим.
         if (csv.length() <= "Date,Time,Speed_kmh,Acceleration_m_s2,WheelPower_kW,EstimatedEnginePower_kW\r\n".length()) {
+            // Настройваме интерфейса или добавяме данни към резултатите.
             statusText.setText("Няма измерени GPS точки за запис."); return;
         }
+        // Изолираме операцията, която може да върне грешка.
         try {
+            // Декларираме променлива или обект, нужен за следващата операция.
             ContentValues values=new ContentValues();
+            // Изпълняваме следващата стъпка от обработката.
             values.put(MediaStore.Downloads.DISPLAY_NAME,"car_dyno_"+new SimpleDateFormat("yyyyMMdd_HHmmss",Locale.US).format(new Date())+".csv");
+            // Изпълняваме следващата стъпка от обработката.
             values.put(MediaStore.Downloads.MIME_TYPE,"text/csv");
+            // Изпълняваме следващата стъпка от обработката.
             values.put(MediaStore.Downloads.RELATIVE_PATH,Environment.DIRECTORY_DOWNLOADS);
+            // Декларираме променлива или обект, нужен за следващата операция.
             android.net.Uri uri=getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);
+            // Проверяваме условие, преди да продължим.
             if(uri==null) throw new Exception("Не може да се създаде файл");
+            // Декларираме променлива или обект, нужен за следващата операция.
             OutputStream os=getContentResolver().openOutputStream(uri);
+            // Проверяваме условие, преди да продължим.
             if(os==null) throw new Exception("Не може да се отвори файл");
+            // Изпълняваме следващата стъпка от обработката.
             os.write(csv.toString().getBytes(StandardCharsets.UTF_8)); os.close();
+            // Настройваме интерфейса или добавяме данни към резултатите.
             statusText.setText("CSV записан в папка Downloads.");
+            // Изпълняваме следващата стъпка от обработката.
             Toast.makeText(this,"Записано в Downloads",Toast.LENGTH_LONG).show();
+        // Настройваме интерфейса или добавяме данни към резултатите.
         } catch(Exception e) { statusText.setText("Грешка при запис: "+e.getMessage()); }
     }
 
     // Продължава теста след дадено разрешение или показва нужната инструкция.
     @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grants) {
+        // Извикваме стандартното поведение на родителския Android клас.
         super.onRequestPermissionsResult(requestCode,permissions,grants);
+        // Проверяваме условие, преди да продължим.
         if(requestCode==REQUEST_LOCATION && grants.length>0 && grants[0]==PackageManager.PERMISSION_GRANTED) startTest();
+        // Изпълняваме алтернативния клон, когато условието не е изпълнено.
         else statusText.setText("Разрешението за местоположение е необходимо за GPS скорост.");
     }
+    // Реализация на callback, който Android извиква автоматично.
     @Override public void onProviderEnabled(String provider) {}
+    // Реализация на callback, който Android извиква автоматично.
     @Override public void onProviderDisabled(String provider) {}
+    // Реализация на callback, който Android извиква автоматично.
     @Override public void onStatusChanged(String provider,int status,Bundle extras) {}
+    // Реализация на callback, който Android извиква автоматично.
     @Override protected void onPause() { super.onPause(); if(running) { try { lm.removeUpdates(this); } catch(Exception ignored) {} running=false; } }
 }
