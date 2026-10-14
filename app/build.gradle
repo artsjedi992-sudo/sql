@@ -1,24 +1,35 @@
 plugins {
+    // Прилага Gradle плъгин за съответната част от проекта.
     id 'com.android.application'
 }
 
 dependencies {
     // Bundled ML Kit model: works without updating Google Play services.
     implementation 'com.google.mlkit:barcode-scanning:17.3.0'
+    // Добавя библиотека, необходима за компилация или тестове.
     implementation 'androidx.camera:camera-camera2:1.4.2'
+    // Добавя библиотека, необходима за компилация или тестове.
     implementation 'androidx.camera:camera-lifecycle:1.4.2'
+    // Добавя библиотека, необходима за компилация или тестове.
     implementation 'androidx.camera:camera-view:1.4.2'
 }
 
 android {
+    // Задава Java namespace на Android приложението.
     namespace 'com.example.phonedatabasebrowser'
+    // Android API версията, използвана за компилация.
     compileSdk 34
 
     defaultConfig {
+        // Идентификатор на приложението, използван при инсталиране.
         applicationId 'com.example.phonedatabasebrowser'
+        // Най-старата Android версия, която приложението поддържа.
         minSdk 29
+        // Android версията, за чиито правила е настроено приложението.
         targetSdk 34
+        // Вътрешен номер на версията за Android пакетите.
         versionCode 1
+        // Видимият номер на версията на приложението.
         versionName '1.0'
     }
 
