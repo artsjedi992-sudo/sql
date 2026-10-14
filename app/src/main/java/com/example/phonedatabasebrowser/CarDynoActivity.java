@@ -1,67 +1,67 @@
 // Пакет на приложението, в който се намира екранът за измерване на мощността.
 package com.example.phonedatabasebrowser;
 
-// Разрешенията за достъп до GPS местоположението на телефона.
+// Разрешенията за GPS местоположение.
 import android.Manifest;
 // Базовият клас за Android екран.
 import android.app.Activity;
 // Диалогови прозорци за настройките и графиката.
 import android.app.AlertDialog;
-// Инструменти за рисуване на графиката.
+// Платното, върху което се рисува графиката.
 import android.graphics.Canvas;
-// Четене и рисуване на елементи на екрана.
+// Настройки за цвят, дебелина и стил на рисуване.
 import android.graphics.Paint;
-// Данни за записване във файла през Android MediaStore.
+// Базовият клас за изгледа, който чертае графиката.
 import android.view.View;
-// Проверка на разрешенията за Android.
+// Полета и стойности за метаданните на CSV файла.
 import android.content.ContentValues;
-// GPS позиция и измерванията от нея.
+// Константи за проверка на разрешенията.
 import android.content.pm.PackageManager;
-// Интерфейсът за получаване на GPS обновявания.
+// Една GPS позиция със скорост и точност.
 import android.location.Location;
-// Управление на жизнения цикъл и системните услуги на Android.
+// Интерфейс за получаване на нови GPS позиции.
 import android.location.LocationListener;
-// Достъп до папката Downloads и системната среда.
+// Системната услуга за местоположение.
 import android.location.LocationManager;
-// API за запис на файлове в системните колекции.
+// Данни, предавани при жизнения цикъл на екрана.
 import android.os.Bundle;
-// Подравняване на елементите в интерфейса.
+// Информация за системни папки като Downloads.
 import android.os.Environment;
-// Бутоните на екрана.
+// API за създаване на файл в системната колекция Downloads.
 import android.provider.MediaStore;
-// Полета за въвеждане на технически параметри.
+// Настройки за подравняване на елементите.
 import android.view.Gravity;
-// Вертикално и хоризонтално подреждане на елементите.
+// Бутоните за управление на теста.
 import android.widget.Button;
-// Контейнер за превъртане, когато съдържанието не се побира.
+// Полета за въвеждане на числови параметри.
 import android.widget.EditText;
-// Текстови етикети и показания.
+// Контейнер за линейно подреждане на изгледи.
 import android.widget.LinearLayout;
-// Кратки съобщения към потребителя.
+// Контейнер, който позволява превъртане.
 import android.widget.ScrollView;
-// Цветове за интерфейса и графиката.
+// Текстови етикети и показания.
 import android.widget.TextView;
-// Фон и рамки със заоблени ъгли.
+// Кратки съобщения към потребителя.
 import android.widget.Toast;
-// Проверка и заявяване на разрешения за Android.
+// Предварително зададени цветове.
 import android.graphics.Color;
-// Проверка на разрешенията чрез съвместимия Android API.
+// Фон с цвят, рамка и заоблени ъгли.
 import android.graphics.drawable.GradientDrawable;
-// Поток за запис на CSV файл.
+// Съвместимо заявяване на разрешения.
 import androidx.core.app.ActivityCompat;
-// Кодировка UTF-8 за записвания текст.
+// Съвместима проверка на разрешенията.
 import androidx.core.content.ContextCompat;
-// Форматиране на дата и час.
+// Поток за записване на байтове във файл.
 import java.io.OutputStream;
-// Текуща дата и час.
+// Стандартни кодировки, включително UTF-8.
 import java.nio.charset.StandardCharsets;
-// Езикови настройки за числата и датите.
+// Форматиране на дата и час.
 import java.text.SimpleDateFormat;
+// Текущ момент за времевия печат.
 import java.util.Date;
-// Екранът реализира и GPS слушател за получаване на нови координати.
+// Езикови настройки за форматиране.
 import java.util.Locale;
 
-    // Android услуга, която предоставя GPS данни.
 public class CarDynoActivity extends Activity implements LocationListener {
     // Полета за маса, аеродинамика, търкаляне и ефективност на трансмисията.
     private static final int REQUEST_LOCATION = 712;
@@ -211,6 +211,7 @@ public class CarDynoActivity extends Activity implements LocationListener {
         // Възстановяваме ефективността на трансмисията.
     }
 
+    // Създава етикет и поле за въвеждане на един технически параметър.
     private LinearLayout field(String label, String value) {
         LinearLayout wrap = new LinearLayout(this);
         wrap.setOrientation(LinearLayout.VERTICAL);
@@ -232,34 +233,42 @@ public class CarDynoActivity extends Activity implements LocationListener {
         return wrap;
     }
 
+    // Създава заглавие на секция с подходящи отстояния.
     private TextView panelLabel(String s) {
         TextView t=text(s,17,0xFF15345B); t.setPadding(0,dp(15),0,dp(6)); return t;
     }
+    // Създава визуално отделено поле за текущ резултат.
     private TextView metric(String s) {
         TextView t=text(s,18,0xFF15345B); t.setPadding(dp(12),dp(10),dp(12),dp(10));
         t.setBackground(bg(0xFFFFFFFF,0xFFD5E0EE)); LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1, -2); p.bottomMargin=dp(6); t.setLayoutParams(p); return t;
     }
+    // Създава текстов изглед със зададени текст, размер и цвят.
     private TextView text(String s,int size,int color) {
         TextView t=new TextView(this); t.setText(s); t.setTextSize(size); t.setTextColor(color); return t;
     }
+    // Създава бутон с общо оформление за този екран.
     private Button button(String s,int color) {
         Button b=new Button(this); b.setText(s); b.setTextColor(Color.WHITE); b.setBackground(bg(color,color));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(52)); p.topMargin=dp(7); b.setLayoutParams(p); return b;
     }
+    // Изработва фон с рамка и заоблени ъгли.
     private GradientDrawable bg(int color,int stroke) {
         GradientDrawable d=new GradientDrawable(); d.setColor(color); d.setCornerRadius(dp(10)); d.setStroke(dp(1),stroke); return d;
     }
     private int dp(float v) { return (int)(v*getResources().getDisplayMetrics().density+0.5f); }
+    // Прочита число от поле; при невалиден текст връща резервна стойност.
     private double val(EditText e,double fallback) {
         try { return Double.parseDouble(e.getText().toString().trim().replace(',','.')); } catch(Exception ex) { return fallback; }
     }
 
 
+    // Изчислява външния диаметър на гумата в милиметри от нейния размер.
     private double tireDiameterMm() {
         try { return Double.parseDouble(rimInches)*25.4+2*Double.parseDouble(tireWidth)*Double.parseDouble(tireAspect)/100.0; }
         catch(Exception e) { return 576.0; }
     }
 
+    // Отваря диалог за редактиране на техническите данни на автомобила.
     private void showVehicleSettings() {
         LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); form.setPadding(dp(18),dp(8),dp(18),dp(4));
         ScrollView sc=new ScrollView(this); sc.addView(form);
@@ -280,6 +289,7 @@ public class CarDynoActivity extends Activity implements LocationListener {
           }).show();
     }
 
+    // Добавя поле към диалога за настройки и връща създадения EditText.
     private EditText settingField(LinearLayout parent,String label,String value) {
         parent.addView(text(label,13,0xFF526780));
         EditText e=new EditText(this); e.setSingleLine(true); e.setText(value);
@@ -287,6 +297,7 @@ public class CarDynoActivity extends Activity implements LocationListener {
         parent.addView(e,new LinearLayout.LayoutParams(-1,dp(48))); return e;
     }
 
+    // Записва параметрите локално, така че да се запазят след рестарт.
     private void saveVehicleSettings() {
         getPreferences(MODE_PRIVATE).edit().putString("mass",massInput.getText().toString())
           .putString("cd",cdInput.getText().toString()).putString("area",areaInput.getText().toString())
@@ -294,6 +305,7 @@ public class CarDynoActivity extends Activity implements LocationListener {
           .putString("tire_width",tireWidth).putString("tire_aspect",tireAspect).putString("rim_inches",rimInches).apply();
     }
 
+    // Показва графиката на мощността от последния измерен тест.
     private void showPowerGraph() {
         if(graphPower.size()<2) {
           new AlertDialog.Builder(this).setTitle("Графика на мощността").setMessage("Първо направи измерване. Графиката се чертае от данните на последния тест.").setPositiveButton("Добре",null).show(); return;
@@ -304,6 +316,7 @@ public class CarDynoActivity extends Activity implements LocationListener {
         new AlertDialog.Builder(this).setTitle("Графика на мощността").setView(box).setPositiveButton("Затвори",null).show();
     }
 
+    // Персонализиран изглед, който чертае кривата на мощността.
     private class PowerGraphView extends View {
         private final Paint p=new Paint(3);
         PowerGraphView(){super(CarDynoActivity.this);setBackgroundColor(Color.WHITE);}
@@ -391,6 +404,7 @@ public class CarDynoActivity extends Activity implements LocationListener {
         }
     }
 
+    // Обработва нова GPS точка и преизчислява скорост, ускорение и мощност.
     @Override public void onLocationChanged(Location loc) {
         if (!running) return;
         double speed = loc.hasSpeed() ? loc.getSpeed() : 0;
@@ -427,6 +441,7 @@ public class CarDynoActivity extends Activity implements LocationListener {
         csv.append(String.format(Locale.US,"%s,%.2f,%.3f,%.3f,%.3f\r\n",stamp,speed*3.6,smoothAccel,wheelW/1000,engineW/1000));
     }
 
+    // Спира GPS слушането и записва събраните данни като CSV файл.
     private void stopAndSave() {
         running=false;
         try { lm.removeUpdates(this); } catch(Exception ignored) {}
@@ -448,6 +463,7 @@ public class CarDynoActivity extends Activity implements LocationListener {
         } catch(Exception e) { statusText.setText("Грешка при запис: "+e.getMessage()); }
     }
 
+    // Продължава теста след дадено разрешение или показва нужната инструкция.
     @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grants) {
         super.onRequestPermissionsResult(requestCode,permissions,grants);
         if(requestCode==REQUEST_LOCATION && grants.length>0 && grants[0]==PackageManager.PERMISSION_GRANTED) startTest();
