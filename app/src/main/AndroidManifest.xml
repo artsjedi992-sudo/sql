@@ -1,20 +1,30 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Декларира системно разрешение или компонент, необходим на приложението. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Декларира системно разрешение или компонент, необходим на приложението. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Декларира системно разрешение или компонент, необходим на приложението. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
         android:allowBackup="false"
         android:label="Database Browser"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
+        <!-- Декларира системно разрешение или компонент, необходим на приложението. -->
         <activity android:name=".ScannerActivity" android:exported="false" />
+        <!-- Декларира системно разрешение или компонент, необходим на приложението. -->
         <activity android:name=".TachometerActivity" android:exported="false" />
+        <!-- Декларира системно разрешение или компонент, необходим на приложението. -->
         <activity android:name=".CarDynoActivity" android:exported="false" />
+        <!-- Декларира системно разрешение или компонент, необходим на приложението. -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
+            <!-- Декларира системно разрешение или компонент, необходим на приложението. -->
             <intent-filter>
+                <!-- Декларира системно разрешение или компонент, необходим на приложението. -->
                 <action android:name="android.intent.action.MAIN" />
+                <!-- Декларира системно разрешение или компонент, необходим на приложението. -->
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
