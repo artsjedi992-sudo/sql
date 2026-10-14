@@ -1,112 +1,214 @@
+// Пакет на приложението, в който се намира екранът за измерване на мощността.
 package com.example.phonedatabasebrowser;
 
+// Разрешенията за достъп до GPS местоположението на телефона.
 import android.Manifest;
+// Базовият клас за Android екран.
 import android.app.Activity;
+// Диалогови прозорци за настройките и графиката.
 import android.app.AlertDialog;
+// Инструменти за рисуване на графиката.
 import android.graphics.Canvas;
+// Четене и рисуване на елементи на екрана.
 import android.graphics.Paint;
+// Данни за записване във файла през Android MediaStore.
 import android.view.View;
+// Проверка на разрешенията за Android.
 import android.content.ContentValues;
+// GPS позиция и измерванията от нея.
 import android.content.pm.PackageManager;
+// Интерфейсът за получаване на GPS обновявания.
 import android.location.Location;
+// Управление на жизнения цикъл и системните услуги на Android.
 import android.location.LocationListener;
+// Достъп до папката Downloads и системната среда.
 import android.location.LocationManager;
+// API за запис на файлове в системните колекции.
 import android.os.Bundle;
+// Подравняване на елементите в интерфейса.
 import android.os.Environment;
+// Бутоните на екрана.
 import android.provider.MediaStore;
+// Полета за въвеждане на технически параметри.
 import android.view.Gravity;
+// Вертикално и хоризонтално подреждане на елементите.
 import android.widget.Button;
+// Контейнер за превъртане, когато съдържанието не се побира.
 import android.widget.EditText;
+// Текстови етикети и показания.
 import android.widget.LinearLayout;
+// Кратки съобщения към потребителя.
 import android.widget.ScrollView;
+// Цветове за интерфейса и графиката.
 import android.widget.TextView;
+// Фон и рамки със заоблени ъгли.
 import android.widget.Toast;
+// Проверка и заявяване на разрешения за Android.
 import android.graphics.Color;
+// Проверка на разрешенията чрез съвместимия Android API.
 import android.graphics.drawable.GradientDrawable;
+// Поток за запис на CSV файл.
 import androidx.core.app.ActivityCompat;
+// Кодировка UTF-8 за записвания текст.
 import androidx.core.content.ContextCompat;
+// Форматиране на дата и час.
 import java.io.OutputStream;
+// Текуща дата и час.
 import java.nio.charset.StandardCharsets;
+// Езикови настройки за числата и датите.
 import java.text.SimpleDateFormat;
 import java.util.Date;
+// Екранът реализира и GPS слушател за получаване на нови координати.
 import java.util.Locale;
 
+    // Android услуга, която предоставя GPS данни.
 public class CarDynoActivity extends Activity implements LocationListener {
+    // Полета за маса, аеродинамика, търкаляне и ефективност на трансмисията.
     private static final int REQUEST_LOCATION = 712;
+    // Размерът на гумата се пази като ширина, профил и диаметър на джантата.
     private LocationManager lm;
+    // Скоростите за хоризонталната ос на графиката.
     private EditText massInput, cdInput, areaInput, crrInput, efficiencyInput;
+    // Оценената мощност за всяка точка от графиката.
     private String tireWidth="195", tireAspect="50", rimInches="15";
+    // Елементи на интерфейса за текущи измервания и статус.
     private final java.util.ArrayList<Float> graphSpeed = new java.util.ArrayList<>();
+    // Показва дали GPS тестът в момента е активен.
     private final java.util.ArrayList<Float> graphPower = new java.util.ArrayList<>();
+    // Предишната GPS точка се използва за изчисляване на ускорението.
     private TextView speedText, accelText, powerText, engineText, statusText, detailsText;
+    // Филтрирано ускорение, текуща мощност и пикови стойности във ватове.
     private boolean running = false;
+    // CSV започва със заглавията на колоните; всяка GPS точка добавя нов ред.
     private Location previous = null;
     private double smoothAccel = 0, peakWheelW = 0, peakEngineW = 0, currentWheelW = 0, currentEngineW = 0;
+    // Android извиква този метод при създаване на екрана.
     private final StringBuilder csv = new StringBuilder("Date,Time,Speed_kmh,Acceleration_m_s2,WheelPower_kW,EstimatedEnginePower_kW\r\n");
 
+        // Получаваме системната услуга за GPS местоположение.
     @Override public void onCreate(Bundle state) {
+        // Отваряме настройките, записани локално за този екран.
         super.onCreate(state);
+        // Възстановяваме размера на гумите или използваме началните стойности.
         lm = (LocationManager) getSystemService(LOCATION_SERVICE);
+        // Създаваме и подреждаме всички елементи на екрана.
         android.content.SharedPreferences prefs = getPreferences(MODE_PRIVATE);
         tireWidth=prefs.getString("tire_width","195"); tireAspect=prefs.getString("tire_aspect","50"); rimInches=prefs.getString("rim_inches","15");
         buildUi();
+    // Създава интерфейса за параметри, резултати и управление на теста.
     }
 
+        // Основният контейнер подрежда съдържанието вертикално.
     private void buildUi() {
+        // Добавяме отстояния около съдържанието, измерени в dp.
         ScrollView scroll = new ScrollView(this);
+        // Задаваме светъл фон на екрана.
         LinearLayout root = new LinearLayout(this);
+        // Поставяме основния контейнер вътре в превъртащия се изглед.
         root.setOrientation(LinearLayout.VERTICAL);
+        // Заглавие на екрана.
         root.setPadding(dp(14), dp(12), dp(14), dp(18));
+        // Центрираме заглавието.
         root.setBackgroundColor(0xFFF2F6FC);
+        // Добавяме заглавието към интерфейса.
         scroll.addView(root);
+        // Кратко обяснение на метода за оценка.
         TextView title = text("Автомобилен динамометър", 25, 0xFF15345B);
+        // Центрираме подзаглавието.
         title.setGravity(Gravity.CENTER);
+        // Показваме подзаглавието под заглавието.
         root.addView(title);
+        // Отделяме секцията с техническите параметри.
         TextView subtitle = text("GPS скорост + ускорение • оценка на мощността", 14, 0xFF526780);
+        // Първи ред с масата и коефициента на въздушно съпротивление.
         subtitle.setGravity(Gravity.CENTER);
+        // Полетата в реда делят наличната ширина поравно.
         root.addView(subtitle);
+        // Въвеждане на масата на автомобила с водача.
         root.addView(panelLabel("Параметри на автомобила"));
+        // Въвеждане на безразмерния коефициент Cd.
         LinearLayout row = new LinearLayout(this);
+        // Показваме първия ред от параметри.
         row.addView(field("Маса с водача (kg)", "1250"), new LinearLayout.LayoutParams(0, dp(72), 1));
+        // Втори ред с челната площ и коефициента на съпротивление при търкаляне.
         row.addView(field("Cd", "0.29"), new LinearLayout.LayoutParams(0, dp(72), 1));
+        // Челната площ влияе върху изчисленото въздушно съпротивление.
         root.addView(row);
+        // Crr определя приблизителната сила на съпротивление при търкаляне.
         LinearLayout row2 = new LinearLayout(this);
+        // Показваме втория ред от параметри.
         row2.addView(field("Челна площ (m²)", "2.02"), new LinearLayout.LayoutParams(0, dp(72), 1));
+        // Трети ред за ефективността на трансмисията.
         row2.addView(field("Търкаляне Crr", "0.012"), new LinearLayout.LayoutParams(0, dp(72), 1));
+        // Добавяме полето за ефективност на трансмисията.
         root.addView(row2);
+        // Показваме третия ред от параметри.
         LinearLayout row3 = new LinearLayout(this);
+        // Описваме избрания профил на автомобила.
         row3.addView(field("Ефективност КПП", "0.85"), new LinearLayout.LayoutParams(0, dp(72), 1));
+        // Показваме размера на гумата и изчисления ѝ диаметър и обиколка.
         root.addView(row3);
+        // Заглавие на секцията с резултатите от измерването.
         root.addView(text("Профил: Mitsubishi Carisma 1.8 • ръчна кутия", 13, 0xFF526780));
+        // Показания за скорост, ускорение и мощност.
         root.addView(text("Размер гуми: "+tireWidth+"/"+tireAspect+" R"+rimInches+" • диаметър ≈ "+String.format(Locale.getDefault(),"%.0f",tireDiameterMm())+" mm • обиколка ≈ "+String.format(Locale.getDefault(),"%.2f",tireDiameterMm()*Math.PI/1000)+" m. GPS определя скоростта.", 12, 0xFF526780));
+        // Създаваме етикета за GPS скоростта.
         root.addView(panelLabel("Резултат в реално време"));
+        // Създаваме етикета за ускорението.
         speedText = metric("Скорост: — km/h");
+        // Създаваме етикета за мощността на колелата.
         accelText = metric("Ускорение: — m/s²");
+        // Създаваме етикета за оценената мощност на двигателя.
         powerText = metric("Мощност на колелата: — kW");
+        // Добавяме показанията в правилния ред.
         engineText = metric("Оценка на двигателя: — kW / — к.с.");
+        // Начален статус преди стартиране на теста.
         root.addView(speedText); root.addView(accelText); root.addView(powerText); root.addView(engineText);
+        // Показваме състоянието на GPS измерването.
         statusText = text("Готово. Нужен е добър GPS сигнал.", 13, 0xFF526780);
+        // Начално обяснение за пиковите стойности.
         root.addView(statusText);
+        // Показваме пиковите стойности под текущите измервания.
         detailsText = text("Максимумите се обновяват по време на измерването.", 13, 0xFF526780);
+        // Бутон за редактиране на техническите данни.
         root.addView(detailsText);
+        // Отваряме прозореца с настройките при натискане.
         Button settings = button("⚙ КОРИГИРАЙ ДАННИТЕ НА КОЛАТА", 0xFF6236C9);
+        // Добавяме бутона за настройки.
         settings.setOnClickListener(v -> showVehicleSettings()); root.addView(settings);
+        // Бутон за отваряне на графиката от последния тест.
         Button graph = button("📈 ГРАФИКА НА МОЩНОСТТА", 0xFFB45309);
+        // Отваряме графиката при натискане.
         graph.setOnClickListener(v -> showPowerGraph()); root.addView(graph);
+        // Добавяме бутона за графика.
         Button start = button("СТАРТ / НОВ ТЕСТ", 0xFF078B62);
+        // Бутон за започване на ново измерване.
         start.setOnClickListener(v -> startTest());
+        // Стартираме GPS теста при натискане.
         root.addView(start);
+        // Добавяме бутона за старт.
         Button stop = button("СПРИ И ЗАПАЗИ CSV", 0xFF3157A4);
+        // Бутон за спиране и запис на CSV резултатите.
         stop.setOnClickListener(v -> stopAndSave());
+        // Спираме измерването и записваме наличните данни.
         root.addView(stop);
+        // Добавяме бутона за запис.
         Button close = button("ЗАТВОРИ", 0xFF65758B);
+        // Бутон за затваряне на екрана.
         close.setOnClickListener(v -> finish());
+        // Затваряме този Activity при натискане.
         root.addView(close);
+        // Добавяме бутона за затваряне.
         setContentView(scroll);
+        // Задаваме готовия интерфейс като съдържание на екрана.
         android.content.SharedPreferences prefs=getPreferences(MODE_PRIVATE);
+        // Повторно четем запазените настройки, за да попълним полетата.
         massInput.setText(prefs.getString("mass","1250")); cdInput.setText(prefs.getString("cd","0.29"));
+        // Възстановяваме масата и Cd или използваме началните стойности.
         areaInput.setText(prefs.getString("area","2.02")); crrInput.setText(prefs.getString("crr","0.012"));
+        // Възстановяваме челната площ и Crr.
         efficiencyInput.setText(prefs.getString("efficiency","0.85"));
+        // Възстановяваме ефективността на трансмисията.
     }
 
     private LinearLayout field(String label, String value) {
