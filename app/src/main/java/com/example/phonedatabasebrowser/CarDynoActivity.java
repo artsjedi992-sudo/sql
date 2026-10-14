@@ -221,21 +221,71 @@ public class CarDynoActivity extends Activity implements LocationListener {
     }
 
     private void startTest() {
+        // Показваме веднага обратна връзка, за да е ясно, че бутонът е натиснат.
+        statusText.setText("Подготовка на GPS измерването...");
+        Toast.makeText(this, "Подготовка на нов тест...", Toast.LENGTH_SHORT).show();
+
+        // Проверяваме дали приложението има точно разрешение за местоположение.
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},REQUEST_LOCATION); return;
+            // Искаме точно и приблизително местоположение, за да може потребителят да избере разрешението.
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, REQUEST_LOCATION);
+            // Изчакваме отговора на Android, преди да започнем GPS измерването.
+            return;
         }
-        saveVehicleSettings();
-        previous=null; smoothAccel=0; peakWheelW=0; peakEngineW=0; csv.setLength(0); graphSpeed.clear(); graphPower.clear();
-        csv.append("Date,Time,Speed_kmh,Acceleration_m_s2,WheelPower_kW,EstimatedEnginePower_kW\r\n");
-        running=true;
+
+        // Проверяваме дали GPS е включен, преди да подготвим измерването.
         try {
             if (!lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                statusText.setText("Включи GPS и натисни Старт отново."); running=false; return;
+                // Обясняваме какво липсва, вместо бутонът да изглежда неработещ.
+                statusText.setText("GPS е изключен. Включи Местоположение/GPS от настройките и натисни Старт отново.");
+                Toast.makeText(this, "Включи GPS от настройките на телефона.", Toast.LENGTH_LONG).show();
+                return;
             }
-            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER,200,0.5f,this);
-            statusText.setText("Измерването работи. Използвай само на затворен, безопасен участък.");
+
+            // Запазваме техническите данни на автомобила за следващото стартиране.
+            saveVehicleSettings();
+
+            // Нулираме предишната GPS точка и филтрираното ускорение за нов тест.
+            previous = null;
+            smoothAccel = 0;
+
+            // Нулираме максималните измерени стойности за мощността.
+            peakWheelW = 0;
+            peakEngineW = 0;
+
+            // Изчистваме резултатите от предишния тест.
+            csv.setLength(0);
+            graphSpeed.clear();
+            graphPower.clear();
+
+            // Пишем заглавния ред на CSV файла за новото измерване.
+            csv.append("Date,Time,Speed_kmh,Acceleration_m_s2,WheelPower_kW,EstimatedEnginePower_kW\\r\\n");
+
+            // Заявяваме GPS обновявания приблизително на всеки 200 ms или 0,5 m.
+            lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 200, 0.5f, this);
+
+            // Отбелязваме, че тестът е активен след успешно заявяване на GPS данните.
+            running = true;
+
+            // Показваме, че измерването е започнало и че се чака GPS точка.
+            statusText.setText("Тестът е стартиран. Чакам GPS данни... Използвай само на затворен, безопасен участък.");
+            Toast.makeText(this, "Тестът е стартиран. Изчаква се GPS сигнал.", Toast.LENGTH_LONG).show();
+
         } catch (SecurityException e) {
-            running=false; statusText.setText("Няма разрешение за GPS.");
+            // Спираме теста, ако Android откаже достъп до GPS.
+            running = false;
+
+            // Показваме конкретна инструкция при липсващо разрешение.
+            statusText.setText("Няма точно разрешение за местоположение. Разреши Location/GPS за приложението.");
+            Toast.makeText(this, "Разреши точно местоположение за приложението.", Toast.LENGTH_LONG).show();
+
+        } catch (Exception e) {
+            // Спираме теста при друга грешка при стартиране на GPS.
+            running = false;
+
+            // Показваме причината, ако Android върне грешка при заявката за GPS.
+            statusText.setText("Грешка при стартиране: " + e.getMessage());
+            Toast.makeText(this, "Грешка при GPS: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
