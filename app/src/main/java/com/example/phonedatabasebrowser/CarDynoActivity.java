@@ -2,6 +2,10 @@ package com.example.phonedatabasebrowser;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.view.View;
 import android.content.ContentValues;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -31,6 +35,9 @@ public class CarDynoActivity extends Activity implements LocationListener {
     private static final int REQUEST_LOCATION = 712;
     private LocationManager lm;
     private EditText massInput, cdInput, areaInput, crrInput, efficiencyInput;
+    private String tireWidth="195", tireAspect="50", rimInches="15";
+    private final java.util.ArrayList<Float> graphSpeed = new java.util.ArrayList<>();
+    private final java.util.ArrayList<Float> graphPower = new java.util.ArrayList<>();
     private TextView speedText, accelText, powerText, engineText, statusText, detailsText;
     private boolean running = false;
     private Location previous = null;
@@ -40,6 +47,8 @@ public class CarDynoActivity extends Activity implements LocationListener {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         lm = (LocationManager) getSystemService(LOCATION_SERVICE);
+        android.content.SharedPreferences prefs = getPreferences(MODE_PRIVATE);
+        tireWidth=prefs.getString("tire_width","195"); tireAspect=prefs.getString("tire_aspect","50"); rimInches=prefs.getString("rim_inches","15");
         buildUi();
     }
 
@@ -68,8 +77,8 @@ public class CarDynoActivity extends Activity implements LocationListener {
         LinearLayout row3 = new LinearLayout(this);
         row3.addView(field("Ефективност КПП", "0.85"), new LinearLayout.LayoutParams(0, dp(72), 1));
         root.addView(row3);
-        root.addView(text("Профил: Mitsubishi Carisma 1.8 • ръчна кутия • гуми 195/50 R15", 13, 0xFF526780));
-        root.addView(text("Диаметър на гумата ≈ 576 mm • обиколка ≈ 1,81 m. Размерът е записан като справочен параметър; GPS определя скоростта.", 12, 0xFF526780));
+        root.addView(text("Профил: Mitsubishi Carisma 1.8 • ръчна кутия", 13, 0xFF526780));
+        root.addView(text("Размер гуми: "+tireWidth+"/"+tireAspect+" R"+rimInches+" • диаметър ≈ "+String.format(Locale.getDefault(),"%.0f",tireDiameterMm())+" mm • обиколка ≈ "+String.format(Locale.getDefault(),"%.2f",tireDiameterMm()*Math.PI/1000)+" m. GPS определя скоростта.", 12, 0xFF526780));
         root.addView(panelLabel("Резултат в реално време"));
         speedText = metric("Скорост: — km/h");
         accelText = metric("Ускорение: — m/s²");
@@ -80,6 +89,10 @@ public class CarDynoActivity extends Activity implements LocationListener {
         root.addView(statusText);
         detailsText = text("Максимумите се обновяват по време на измерването.", 13, 0xFF526780);
         root.addView(detailsText);
+        Button settings = button("⚙ КОРИГИРАЙ ДАННИТЕ НА КОЛАТА", 0xFF6236C9);
+        settings.setOnClickListener(v -> showVehicleSettings()); root.addView(settings);
+        Button graph = button("📈 ГРАФИКА НА МОЩНОСТТА", 0xFFB45309);
+        graph.setOnClickListener(v -> showPowerGraph()); root.addView(graph);
         Button start = button("СТАРТ / НОВ ТЕСТ", 0xFF078B62);
         start.setOnClickListener(v -> startTest());
         root.addView(start);
@@ -90,6 +103,10 @@ public class CarDynoActivity extends Activity implements LocationListener {
         close.setOnClickListener(v -> finish());
         root.addView(close);
         setContentView(scroll);
+        android.content.SharedPreferences prefs=getPreferences(MODE_PRIVATE);
+        massInput.setText(prefs.getString("mass","1250")); cdInput.setText(prefs.getString("cd","0.29"));
+        areaInput.setText(prefs.getString("area","2.02")); crrInput.setText(prefs.getString("crr","0.012"));
+        efficiencyInput.setText(prefs.getString("efficiency","0.85"));
     }
 
     private LinearLayout field(String label, String value) {
@@ -135,11 +152,80 @@ public class CarDynoActivity extends Activity implements LocationListener {
         try { return Double.parseDouble(e.getText().toString().trim().replace(',','.')); } catch(Exception ex) { return fallback; }
     }
 
+
+    private double tireDiameterMm() {
+        try { return Double.parseDouble(rimInches)*25.4+2*Double.parseDouble(tireWidth)*Double.parseDouble(tireAspect)/100.0; }
+        catch(Exception e) { return 576.0; }
+    }
+
+    private void showVehicleSettings() {
+        LinearLayout form=new LinearLayout(this); form.setOrientation(LinearLayout.VERTICAL); form.setPadding(dp(18),dp(8),dp(18),dp(4));
+        ScrollView sc=new ScrollView(this); sc.addView(form);
+        EditText mass=settingField(form,"Маса с водача (kg)",massInput.getText().toString());
+        EditText cd=settingField(form,"Коефициент въздушно съпротивление Cd",cdInput.getText().toString());
+        EditText area=settingField(form,"Челна площ (m²)",areaInput.getText().toString());
+        EditText crr=settingField(form,"Коефициент търкаляне Crr",crrInput.getText().toString());
+        EditText eff=settingField(form,"Ефективност на трансмисията (0–1)",efficiencyInput.getText().toString());
+        EditText tw=settingField(form,"Ширина на гумата (mm)",tireWidth);
+        EditText ta=settingField(form,"Профил на гумата (%)",tireAspect);
+        EditText rim=settingField(form,"Диаметър на джантата (цола)",rimInches);
+        new AlertDialog.Builder(this).setTitle("Технически данни на автомобила").setView(sc)
+          .setNegativeButton("Отказ",null).setPositiveButton("ЗАПАЗИ",(d,w)->{
+            massInput.setText(mass.getText()); cdInput.setText(cd.getText()); areaInput.setText(area.getText());
+            crrInput.setText(crr.getText()); efficiencyInput.setText(eff.getText());
+            tireWidth=tw.getText().toString().trim(); tireAspect=ta.getText().toString().trim(); rimInches=rim.getText().toString().trim();
+            saveVehicleSettings(); Toast.makeText(this,"Данните са запазени за следващите стартирания.",Toast.LENGTH_LONG).show(); buildUi();
+          }).show();
+    }
+
+    private EditText settingField(LinearLayout parent,String label,String value) {
+        parent.addView(text(label,13,0xFF526780));
+        EditText e=new EditText(this); e.setSingleLine(true); e.setText(value);
+        e.setInputType(android.text.InputType.TYPE_CLASS_NUMBER|android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL|android.text.InputType.TYPE_NUMBER_FLAG_SIGNED);
+        parent.addView(e,new LinearLayout.LayoutParams(-1,dp(48))); return e;
+    }
+
+    private void saveVehicleSettings() {
+        getPreferences(MODE_PRIVATE).edit().putString("mass",massInput.getText().toString())
+          .putString("cd",cdInput.getText().toString()).putString("area",areaInput.getText().toString())
+          .putString("crr",crrInput.getText().toString()).putString("efficiency",efficiencyInput.getText().toString())
+          .putString("tire_width",tireWidth).putString("tire_aspect",tireAspect).putString("rim_inches",rimInches).apply();
+    }
+
+    private void showPowerGraph() {
+        if(graphPower.size()<2) {
+          new AlertDialog.Builder(this).setTitle("Графика на мощността").setMessage("Първо направи измерване. Графиката се чертае от данните на последния тест.").setPositiveButton("Добре",null).show(); return;
+        }
+        LinearLayout box=new LinearLayout(this); box.setOrientation(LinearLayout.VERTICAL); box.setPadding(dp(8),dp(8),dp(8),dp(8));
+        box.addView(text(String.format(Locale.getDefault(),"Пик в теста: %.1f kW (≈ %.1f к.с.). X: скорост (km/h), Y: оценена мощност на двигателя (kW).",peakEngineW/1000,peakEngineW/735.5),13,0xFF15345B));
+        box.addView(new PowerGraphView(),new LinearLayout.LayoutParams(-1,dp(330)));
+        new AlertDialog.Builder(this).setTitle("Графика на мощността").setView(box).setPositiveButton("Затвори",null).show();
+    }
+
+    private class PowerGraphView extends View {
+        private final Paint p=new Paint(3);
+        PowerGraphView(){super(CarDynoActivity.this);setBackgroundColor(Color.WHITE);}
+        @Override protected void onDraw(Canvas c) {
+          super.onDraw(c); float left=dp(48),top=dp(18),right=getWidth()-dp(16),bottom=getHeight()-dp(42);
+          float maxX=1,maxY=1; for(float x:graphSpeed)maxX=Math.max(maxX,x); for(float y:graphPower)maxY=Math.max(maxY,y); maxY=(float)Math.ceil(maxY*1.15);
+          p.setColor(0xFFDCE4EF);p.setStrokeWidth(dp(1));
+          for(int i=0;i<=5;i++){float y=bottom-(bottom-top)*i/5f;c.drawLine(left,y,right,y,p);p.setColor(0xFF526780);p.setTextSize(dp(10));c.drawText(String.format(Locale.US,"%.0f",maxY*i/5),dp(5),y+dp(4),p);p.setColor(0xFFDCE4EF);}
+          c.drawLine(left,top,left,bottom,p);c.drawLine(left,bottom,right,bottom,p);
+          p.setColor(0xFFB45309);p.setStrokeWidth(dp(2.5f));p.setStyle(Paint.Style.STROKE);p.setStrokeJoin(Paint.Join.ROUND);
+          android.graphics.Path path=new android.graphics.Path();
+          for(int i=0;i<graphPower.size();i++){float x=left+(right-left)*graphSpeed.get(i)/maxX;float y=bottom-(bottom-top)*graphPower.get(i)/maxY;if(i==0)path.moveTo(x,y);else path.lineTo(x,y);}
+          c.drawPath(path,p);p.setStyle(Paint.Style.FILL);p.setColor(0xFF15345B);p.setTextSize(dp(11));
+          c.drawText("Скорост (km/h)",(left+right)/2-dp(35),getHeight()-dp(8),p);
+          c.save();c.rotate(-90,dp(12),(top+bottom)/2);c.drawText("Мощност (kW)",dp(12),(top+bottom)/2,p);c.restore();
+        }
+    }
+
     private void startTest() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION},REQUEST_LOCATION); return;
         }
-        previous=null; smoothAccel=0; peakWheelW=0; peakEngineW=0; csv.setLength(0);
+        saveVehicleSettings();
+        previous=null; smoothAccel=0; peakWheelW=0; peakEngineW=0; csv.setLength(0); graphSpeed.clear(); graphPower.clear();
         csv.append("Date,Time,Speed_kmh,Acceleration_m_s2,WheelPower_kW,EstimatedEnginePower_kW\r\n");
         running=true;
         try {
@@ -178,6 +264,7 @@ public class CarDynoActivity extends Activity implements LocationListener {
         wheelW=Math.max(0,wheelW);
         double engineW=wheelW/efficiency;
         currentWheelW=wheelW; currentEngineW=engineW;
+        graphSpeed.add((float)(speed*3.6)); graphPower.add((float)(engineW/1000));
         peakWheelW=Math.max(peakWheelW,wheelW); peakEngineW=Math.max(peakEngineW,engineW);
         speedText.setText(String.format(Locale.getDefault(),"Скорост: %.1f km/h",speed*3.6));
         accelText.setText(String.format(Locale.getDefault(),"Ускорение: %.2f m/s²",smoothAccel));
