@@ -260,10 +260,17 @@ public class AcousticTachometerActivity extends Activity {
         for (int i = 0; i < wave.length; i++) wave[i] = pcm[i * pcm.length / wave.length] / 32768.0;
         waveform = wave;
 
+        // Запазваме моментните стойности във final променливи за безопасно предаване към UI нишката.
+        final double rpmUi = rpm;
+        final double chosenHzUi = chosenHz;
+        final double fftHzUi = fftHz;
+        final double rmsUi = rms;
+        final int pulsesUi = pulsesPerRevolution;
+
         runOnUiThread(() -> {
-            rpmText.setText(rpm > 0 ? String.format(Locale.US, "%.0f RPM", rpm) : "--- RPM");
-            frequencyText.setText(String.format(Locale.US, "Открита честота: %.2f Hz  |  FFT пик: %.2f Hz", chosenHz, fftHz));
-            statusText.setText(String.format(Locale.US, "Ниво на сигнала: %.0f  |  Импулси/оборот: %d", rms, pulsesPerRevolution));
+            rpmText.setText(rpmUi > 0 ? String.format(Locale.US, "%.0f RPM", rpmUi) : "--- RPM");
+            frequencyText.setText(String.format(Locale.US, "Открита честота: %.2f Hz  |  FFT пик: %.2f Hz", chosenHzUi, fftHzUi));
+            statusText.setText(String.format(Locale.US, "Ниво на сигнала: %.0f  |  Импулси/оборот: %d", rmsUi, pulsesUi));
             spectrumView.invalidate();
         });
     }
