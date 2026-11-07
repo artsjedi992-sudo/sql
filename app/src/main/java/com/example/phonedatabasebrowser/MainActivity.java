@@ -233,6 +233,15 @@ public class MainActivity extends Activity {
         tachAction.addView(coloredButton("⟳  Оптичен тахометър (500–3000 RPM)", 0xFF6236C9, () -> startActivity(new Intent(this, TachometerActivity.class))), new LinearLayout.LayoutParams(-1, dp(52)));
         // Добавяме елемент към оформлението на екрана.
         root.addView(tachAction);
+        // Добавя отделен вход към измерването на обороти чрез звук и спектрален анализ.
+        LinearLayout acousticAction = new LinearLayout(this);
+        // Подравнява бутона акустичен тахометър спрямо останалите модули.
+        acousticAction.setPadding(dp(8), dp(0), dp(8), dp(4));
+        // Отваря екрана за тракания, FFT спектър и автоматично разпознаване.
+        acousticAction.addView(coloredButton("🔊  Акустичен тахометър (FFT)", 0xFF0F766E, () -> startActivity(new Intent(this, AcousticTachometerActivity.class))), new LinearLayout.LayoutParams(-1, dp(52)));
+        // Поставя новия модул на началния екран.
+        root.addView(acousticAction);
+
         // Подготвяме променлива или обект, нужен за следващите операции.
         LinearLayout dynoAction = new LinearLayout(this);
         // Изпълняваме операцията, необходима за тази функционалност.
