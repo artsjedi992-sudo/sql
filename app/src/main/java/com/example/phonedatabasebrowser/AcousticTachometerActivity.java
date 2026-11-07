@@ -210,7 +210,8 @@ public class AcousticTachometerActivity extends Activity {
 
     // Чете непрекъснат аудио поток и подава всеки прозорец към анализа.
     private void audioLoop() {
-        short[] samples = new short[FFT_SIZE];
+        // Четирисекунден прозорец позволява измерване и при бавно почукване.
+        short[] samples = new short[SAMPLE_RATE * 4];
         while (running.get() && recorder != null) {
             int offset = 0;
             while (offset < samples.length && running.get()) {
@@ -224,18 +225,25 @@ public class AcousticTachometerActivity extends Activity {
 
     // Избира подходящия алгоритъм и обновява измерените RPM и спектралната графика.
     private void analyze(short[] pcm) {
-        double[] values = new double[FFT_SIZE];
+        // Нивото се оценява върху целия запис, а FFT използва последните 8192 проби.
         double mean = 0;
         for (short sample : pcm) mean += sample;
         mean /= pcm.length;
-
         double rms = 0;
-        for (int i = 0; i < pcm.length; i++) {
-            double window = 0.5 - 0.5 * Math.cos(2.0 * Math.PI * i / (pcm.length - 1));
-            values[i] = (pcm[i] - mean) * window;
-            rms += values[i] * values[i];
+        for (short sample : pcm) {
+            double centered = sample - mean;
+            rms += centered * centered;
         }
         rms = Math.sqrt(rms / pcm.length);
+        double[] values = new double[FFT_SIZE];
+        int fftStart = pcm.length - FFT_SIZE;
+        double fftMean = 0;
+        for (int i = fftStart; i < pcm.length; i++) fftMean += pcm[i];
+        fftMean /= FFT_SIZE;
+        for (int i = 0; i < FFT_SIZE; i++) {
+            double window = 0.5 - 0.5 * Math.cos(2.0 * Math.PI * i / (FFT_SIZE - 1));
+            values[i] = (pcm[fftStart + i] - fftMean) * window;
+        }
         if (rms < 12) {
             runOnUiThread(() -> statusText.setText("Сигналът е слаб. Приближи микрофона или намали околния шум."));
             return;
@@ -326,33 +334,59 @@ public class AcousticTachometerActivity extends Activity {
         return (best + correction) * SAMPLE_RATE / FFT_SIZE;
     }
 
-    // Открива повтарящите се удари по пиковете на звуковата обвивка.
+    // Открива периода на траканията в четирисекунден запис, включително бавни удари.
     private double estimateClickRate(short[] pcm) {
-        int envelopeSize = 512;
-        double[] envelope = new double[envelopeSize];
+        int envelopeSize = 1024;
         int block = pcm.length / envelopeSize;
+        double[] envelope = new double[envelopeSize];
+
+        // Усредняваме абсолютната амплитуда в малки блокове, за да отделим ударите от аудио честотата.
         for (int i = 0; i < envelopeSize; i++) {
             double sum = 0;
-            for (int k = 0; k < block; k++) sum += Math.abs(pcm[i * block + k]);
+            int from = i * block;
+            for (int k = 0; k < block; k++) sum += Math.abs(pcm[from + k]);
             envelope[i] = sum / block;
         }
+
+        // Премахваме постоянния фон и измерваме енергията на обвивката.
         double avg = 0;
         for (double value : envelope) avg += value;
         avg /= envelope.length;
-        for (int i = 0; i < envelope.length; i++) envelope[i] -= avg;
+        double energy = 0;
+        for (int i = 0; i < envelope.length; i++) {
+            envelope[i] -= avg;
+            energy += envelope[i] * envelope[i];
+        }
+        if (energy < 1.0) return 0;
 
-        int minLag = Math.max(1, (int) (SAMPLE_RATE / (block * 80.0)));
+        // Допускаме 0,5–20 удара в секунда; това покрива и много бавно почукване.
+        int minLag = Math.max(2, (int) (SAMPLE_RATE / (block * 20.0)));
         int maxLag = Math.min(envelope.length / 2, (int) (SAMPLE_RATE / (block * 0.5)));
-        double best = 0;
+        double bestCorrelation = 0;
         int bestLag = 0;
+
+        // Нормализираната автокорелация не зависи от силата на микрофонния сигнал.
         for (int lag = minLag; lag <= maxLag; lag++) {
             double correlation = 0;
-            for (int i = 0; i < envelope.length - lag; i++) correlation += envelope[i] * envelope[i + lag];
-            if (correlation > best) { best = correlation; bestLag = lag; }
+            double energyA = 0;
+            double energyB = 0;
+            for (int i = 0; i < envelope.length - lag; i++) {
+                double a = envelope[i];
+                double b = envelope[i + lag];
+                correlation += a * b;
+                energyA += a * a;
+                energyB += b * b;
+            }
+            double denominator = Math.sqrt(energyA * energyB);
+            double normalized = denominator > 0 ? correlation / denominator : 0;
+            if (normalized > bestCorrelation) {
+                bestCorrelation = normalized;
+                bestLag = lag;
+            }
         }
-        if (bestLag == 0) return 0;
-        double confidence = best / (envelope.length * (avg * avg + 1));
-        if (confidence < 1) return 0;
+
+        // Под слаб праг не показваме измислени обороти от случаен шум.
+        if (bestLag == 0 || bestCorrelation < 0.25) return 0;
         return SAMPLE_RATE / (block * (double) bestLag);
     }
 
