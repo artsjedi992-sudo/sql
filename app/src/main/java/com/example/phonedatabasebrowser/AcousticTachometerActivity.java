@@ -42,6 +42,9 @@ public class AcousticTachometerActivity extends Activity {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private volatile int mode = MODE_CLICKS;
     private volatile int pulsesPerRevolution = 1;
+    private volatile double minFrequencyHz = 1.0;
+    private volatile double maxFrequencyHz = 40.0;
+    private volatile double envelopeSampleRate = 256.0;
     private volatile double currentRpm = 0;
     private volatile double peakFrequency = 0;
     private volatile double[] spectrum = new double[FFT_SIZE / 2];
@@ -56,6 +59,9 @@ public class AcousticTachometerActivity extends Activity {
     private SpectrumView spectrumView;
     private Spinner modeSpinner;
     private SeekBar pulseSeek;
+    private SeekBar minFrequencySeek;
+    private SeekBar maxFrequencySeek;
+    private TextView frequencyRangeText;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -123,11 +129,47 @@ public class AcousticTachometerActivity extends Activity {
             @Override public void onStopTrackingTouch(SeekBar bar) { }
         });
         root.addView(pulseSeek);
+        root.addView(text("ДОЛНА ГРАНИЦА НА ЧЕСТОТНИЯ ДИАПАЗОН (Hz)", 14, 0xFF103D73));
+        minFrequencySeek = new SeekBar(this);
+        minFrequencySeek.setMax(255);
+        minFrequencySeek.setProgress(2);
+        minFrequencySeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar bar, int value, boolean fromUser) {
+                minFrequencyHz = Math.max(0.5, value * 0.5);
+                if (minFrequencyHz >= maxFrequencyHz) {
+                    maxFrequencyHz = Math.min(127.5, minFrequencyHz + 0.5);
+                    if (maxFrequencySeek != null) maxFrequencySeek.setProgress((int)Math.round(maxFrequencyHz * 2));
+                }
+                updateFrequencyRange();
+            }
+            @Override public void onStartTrackingTouch(SeekBar bar) { }
+            @Override public void onStopTrackingTouch(SeekBar bar) { }
+        });
+        root.addView(minFrequencySeek);
+        root.addView(text("ГОРНА ГРАНИЦА НА ЧЕСТОТНИЯ ДИАПАЗОН (Hz)", 14, 0xFF103D73));
+        maxFrequencySeek = new SeekBar(this);
+        maxFrequencySeek.setMax(255);
+        maxFrequencySeek.setProgress(80);
+        maxFrequencySeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override public void onProgressChanged(SeekBar bar, int value, boolean fromUser) {
+                maxFrequencyHz = Math.max(1.0, value * 0.5);
+                if (maxFrequencyHz <= minFrequencyHz) {
+                    minFrequencyHz = Math.max(0.5, maxFrequencyHz - 0.5);
+                    if (minFrequencySeek != null) minFrequencySeek.setProgress((int)Math.round(minFrequencyHz * 2));
+                }
+                updateFrequencyRange();
+            }
+            @Override public void onStartTrackingTouch(SeekBar bar) { }
+            @Override public void onStopTrackingTouch(SeekBar bar) { }
+        });
+        root.addView(maxFrequencySeek);
+        frequencyRangeText = text("Избран диапазон: 1.0 – 40.0 Hz", 14, 0xFF087B50);
+        root.addView(frequencyRangeText);
 
         spectrumView = new SpectrumView();
         root.addView(spectrumView, new LinearLayout.LayoutParams(-1, 260));
 
-        root.addView(text("Графиката показва амплитудата спрямо честотата. Пикът маркира откритата честота.", 12, 0xFF475569));
+        root.addView(text("Фурие хистограма: хоризонтално е честотата на повторение (Hz), вертикално – силата. Зелената зона е избраният диапазон, червената линия е откритият пик.", 12, 0xFF475569));
 
         statusText = text("Подготвя се микрофонът…", 14, 0xFF103D73);
         root.addView(statusText);
@@ -147,6 +189,13 @@ public class AcousticTachometerActivity extends Activity {
 
         setContentView(scroll);
         updateModeInfo();
+        updateFrequencyRange();
+    }
+
+    private void updateFrequencyRange() {
+        if (frequencyRangeText == null) return;
+        frequencyRangeText.setText(String.format(Locale.US, "Избран диапазон: %.1f – %.1f Hz", minFrequencyHz, maxFrequencyHz));
+        if (spectrumView != null) spectrumView.invalidate();
     }
 
     private TextView text(String value, int size, int color) {
@@ -225,7 +274,7 @@ public class AcousticTachometerActivity extends Activity {
 
     // Избира подходящия алгоритъм и обновява измерените RPM и спектралната графика.
     private void analyze(short[] pcm) {
-        // Нивото се оценява върху целия запис, а FFT използва последните 8192 проби.
+        // Нивото се оценява върху целия четирисекунден запис.
         double mean = 0;
         for (short sample : pcm) mean += sample;
         mean /= pcm.length;
@@ -235,24 +284,18 @@ public class AcousticTachometerActivity extends Activity {
             rms += centered * centered;
         }
         rms = Math.sqrt(rms / pcm.length);
-        double[] values = new double[FFT_SIZE];
-        int fftStart = pcm.length - FFT_SIZE;
-        double fftMean = 0;
-        for (int i = fftStart; i < pcm.length; i++) fftMean += pcm[i];
-        fftMean /= FFT_SIZE;
-        for (int i = 0; i < FFT_SIZE; i++) {
-            double window = 0.5 - 0.5 * Math.cos(2.0 * Math.PI * i / (FFT_SIZE - 1));
-            values[i] = (pcm[fftStart + i] - fftMean) * window;
-        }
         if (rms < 12) {
             runOnUiThread(() -> statusText.setText("Сигналът е слаб. Приближи микрофона или намали околния шум."));
             return;
         }
 
-        double[] magnitudes = fftMagnitudes(values);
-        spectrum = magnitudes;
-        double fftHz = findDominantFrequency(magnitudes);
-        double clickHz = estimateClickRate(pcm);
+        double[] envelope = buildEnvelope(pcm, 1024);
+        double envelopeRate = SAMPLE_RATE / (double) (pcm.length / envelope.length);
+        envelopeSampleRate = envelopeRate;
+        double[] envelopeSpectrum = fftMagnitudes(envelope);
+        spectrum = envelopeSpectrum;
+        double fftHz = findDominantFrequency(envelopeSpectrum, envelopeRate, minFrequencyHz, maxFrequencyHz);
+        double clickHz = estimateClickRate(pcm, minFrequencyHz, maxFrequencyHz);
         double chosenHz;
 
         if (mode == MODE_CLICKS) chosenHz = clickHz;
@@ -318,10 +361,12 @@ public class AcousticTachometerActivity extends Activity {
         return magnitude;
     }
 
-    // Търси най-силния спектрален пик в полезния диапазон 5–5000 Hz.
-    private double findDominantFrequency(double[] magnitude) {
-        int first = Math.max(1, (int) (5.0 * FFT_SIZE / SAMPLE_RATE));
-        int last = Math.min(magnitude.length - 2, (int) (5000.0 * FFT_SIZE / SAMPLE_RATE));
+    // Търси най-силния Фурие пик само в зададения от потребителя диапазон.
+    private double findDominantFrequency(double[] magnitude, double sampleRate, double minHz, double maxHz) {
+        int n = magnitude.length * 2;
+        int first = Math.max(1, (int) Math.ceil(minHz * n / sampleRate));
+        int last = Math.min(magnitude.length - 2, (int) Math.floor(maxHz * n / sampleRate));
+        if (last < first) return 0;
         int best = first;
         for (int i = first + 1; i <= last; i++) if (magnitude[i] > magnitude[best]) best = i;
         if (magnitude[best] <= 0) return 0;
@@ -331,37 +376,39 @@ public class AcousticTachometerActivity extends Activity {
         double right = Math.log(magnitude[best + 1] + 1e-12);
         double denom = left - 2 * center + right;
         double correction = denom == 0 ? 0 : 0.5 * (left - right) / denom;
-        return (best + correction) * SAMPLE_RATE / FFT_SIZE;
+        return (best + correction) * sampleRate / n;
     }
 
     // Открива периода на траканията в четирисекунден запис, включително бавни удари.
-    private double estimateClickRate(short[] pcm) {
-        int envelopeSize = 1024;
+    private double[] buildEnvelope(short[] pcm, int envelopeSize) {
         int block = pcm.length / envelopeSize;
         double[] envelope = new double[envelopeSize];
-
-        // Усредняваме абсолютната амплитуда в малки блокове, за да отделим ударите от аудио честотата.
         for (int i = 0; i < envelopeSize; i++) {
             double sum = 0;
             int from = i * block;
             for (int k = 0; k < block; k++) sum += Math.abs(pcm[from + k]);
             envelope[i] = sum / block;
         }
-
-        // Премахваме постоянния фон и измерваме енергията на обвивката.
         double avg = 0;
         for (double value : envelope) avg += value;
         avg /= envelope.length;
+        for (int i = 0; i < envelope.length; i++) envelope[i] -= avg;
+        return envelope;
+    }
+
+    private double estimateClickRate(short[] pcm, double minHz, double maxHz) {
+        int envelopeSize = 1024;
+        int block = pcm.length / envelopeSize;
+        double[] envelope = buildEnvelope(pcm, envelopeSize);
+
+        // Премахваме постоянния фон и измерваме енергията на обвивката.
         double energy = 0;
-        for (int i = 0; i < envelope.length; i++) {
-            envelope[i] -= avg;
-            energy += envelope[i] * envelope[i];
-        }
+        for (double value : envelope) energy += value * value;
         if (energy < 1.0) return 0;
 
-        // Допускаме 0,5–20 удара в секунда; това покрива и много бавно почукване.
-        int minLag = Math.max(2, (int) (SAMPLE_RATE / (block * 20.0)));
-        int maxLag = Math.min(envelope.length / 2, (int) (SAMPLE_RATE / (block * 0.5)));
+        double envelopeRate = SAMPLE_RATE / (double) block;
+        int minLag = Math.max(2, (int) Math.floor(envelopeRate / maxHz));
+        int maxLag = Math.min(envelope.length / 2, (int) Math.ceil(envelopeRate / minHz));
         double bestCorrelation = 0;
         int bestLag = 0;
 
@@ -399,27 +446,33 @@ public class AcousticTachometerActivity extends Activity {
             float w = getWidth(), h = getHeight();
             paint.setColor(0xFFE2E8F0); paint.setStrokeWidth(1);
             for (int i = 1; i < 5; i++) canvas.drawLine(0, h * i / 5f, w, h * i / 5f, paint);
-            paint.setColor(0xFF64748B); paint.setTextSize(25);
-            canvas.drawText("FFT спектър (Hz)", 14, 28, paint);
             double[] data = spectrum;
             double max = 1;
-            for (int i = 1; i < data.length; i++) if (data[i] > max) max = data[i];
-            paint.setColor(0xFF0878D1); paint.setStrokeWidth(2);
-            float prevX = 0, prevY = h;
-            for (int x = 1; x < (int) w; x++) {
-                int bin = Math.max(1, Math.min(data.length - 1, (int) (x * (5000.0 * FFT_SIZE / SAMPLE_RATE) / w)));
-                float y = h - 12 - (float) (Math.log1p(data[bin]) / Math.log1p(max) * (h - 55));
-                if (x > 1) canvas.drawLine(prevX, prevY, x, y, paint);
-                prevX = x; prevY = y;
+            for (double value : data) if (value > max) max = value;
+            float left = 42, right = w - 10, top = 42, bottom = h - 30;
+            float pw = Math.max(1, right - left), ph = Math.max(1, bottom - top);
+            float x1 = left + (float)(minFrequencyHz / 128.0 * pw);
+            float x2 = left + (float)(maxFrequencyHz / 128.0 * pw);
+            paint.setColor(0x2230A46C); canvas.drawRect(x1, top, x2, bottom, paint);
+            paint.setColor(0xFF64748B); paint.setTextSize(22);
+            canvas.drawText("Фурие спектър на повторенията", 12, 27, paint);
+            paint.setColor(0xFFE2E8F0); paint.setStrokeWidth(1);
+            for (int i = 1; i < 5; i++) canvas.drawLine(left, top + ph * i / 5f, right, top + ph * i / 5f, paint);
+            paint.setColor(0xFF0878D1);
+            for (int i = 1; i < data.length; i++) {
+                float hz = i * (float)envelopeSampleRate / (data.length * 2.0f);
+                float x = left + hz / 128.0f * pw;
+                float bw = Math.max(1f, pw / data.length + 0.5f);
+                float bh = (float)(Math.log1p(data[i]) / Math.log1p(max) * ph);
+                canvas.drawRect(x, bottom - bh, x + bw, bottom, paint);
             }
-            float peakX = (float) (peakFrequency / 5000.0 * w);
-            paint.setColor(0xFFE04B59); paint.setStrokeWidth(3);
-            canvas.drawLine(peakX, 35, peakX, h - 12, paint);
-            paint.setTextSize(22);
-            canvas.drawText(String.format(Locale.US, "%.1f Hz", peakFrequency), Math.max(8, Math.min(w - 100, peakX + 5)), 52, paint);
-            paint.setColor(0xFF475569); paint.setTextSize(20);
-            canvas.drawText("0", 8, h - 5, paint);
-            canvas.drawText("5000 Hz", Math.max(8, w - 90), h - 5, paint);
+            float peakX = left + (float)(peakFrequency / 128.0 * pw);
+            paint.setColor(0xFFE04B59); paint.setStrokeWidth(2);
+            canvas.drawLine(peakX, top, peakX, bottom, paint);
+            paint.setColor(0xFF475569); paint.setTextSize(18);
+            canvas.drawText("0", left, h - 5, paint);
+            canvas.drawText("64 Hz", left + pw / 2 - 20, h - 5, paint);
+            canvas.drawText("128 Hz", Math.max(left, right - 55), h - 5, paint);
         }
     }
 
